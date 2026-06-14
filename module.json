@@ -1,0 +1,24 @@
+{
+  "id": "loreweave-ui",
+  "title": "Loreweave UI",
+  "description": "Track tabletop RPG characters and their relationships inside Foundry VTT.",
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14",
+    "maximum": "14"
+  },
+  "authors": [{ "name": "Jakub Tederko" }],
+  "esmodules": ["main.js"],
+  "styles": ["style.css"],
+  "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
+  "url": "https://github.com/Exoil/Loreweave-plugin",
+  "manifest": "",
+  "download": "",
+  "license": "",
+  "readme": "README.md",
+  "relationships": {
+    "systems": [],
+    "requires": []
+  }
+}
