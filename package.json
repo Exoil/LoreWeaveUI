@@ -1,5 +1,5 @@
 {
-  "name": "loreweave-ui",
+  "name": "loreweaveui",
   "version": "0.1.0",
   "description": "Foundry VTT module that tracks tabletop-RPG characters and the relationships between them.",
   "repository": {

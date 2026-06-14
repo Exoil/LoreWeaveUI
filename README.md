@@ -1,12 +1,12 @@
-# Loreweave UI
+# LoreWeave UI
 
 A Foundry VTT v14 module that visualizes tabletop-RPG characters and the
-relationships between them as an interactive graph. Loreweave UI is the
+relationships between them as an interactive graph. LoreWeave UI is the
 frontend for the [RpgAssistant](https://github.com/Exoil) backend API.
 
 ## Module id
 
-`loreweave-ui` — used throughout `module.json`, settings keys, hook names,
+`loreweaveui` — used throughout `module.json`, settings keys, hook names,
 CSS scope, and i18n keys.
 
 ## Requirements
@@ -32,21 +32,21 @@ bun run build:foundry      # Foundry-module build  → dist/ (self-contained mod
 ```
 
 The `dist/` directory is laid out so it can be dropped into a Foundry data
-folder verbatim at `Data/modules/loreweave-ui/`. For local docker-compose
+folder verbatim at `Data/modules/loreweaveui/`. For local docker-compose
 work-flows, mount `dist/` read-only into the Foundry container at
-`/data/Data/modules/loreweave-ui`.
+`/data/Data/modules/loreweaveui`.
 
 ## Settings
 
 | Setting (id)                       | Scope | Default                  | Purpose                                              |
 | ---------------------------------- | ----- | ------------------------ | ---------------------------------------------------- |
-| `loreweave-ui.apiBaseUrl`          | world | `http://localhost:8080`  | URL the module uses to reach the RpgAssistant API.   |
+| `loreweaveui.apiBaseUrl`           | world | `http://localhost:8080`  | URL the module uses to reach the RpgAssistant API.   |
 
 ## Layout
 
 ```
 .
-├── module.json              <- Foundry manifest (id: loreweave-ui)
+├── module.json              <- Foundry manifest (id: loreweaveui)
 ├── lang/                    <- i18n catalogs
 ├── src/
 │   ├── foundry/             <- Foundry-host glue (ApplicationV2, hooks, constants)

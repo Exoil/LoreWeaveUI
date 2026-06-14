@@ -1,4 +1,4 @@
-# CLAUDE.md — Loreweave UI
+# CLAUDE.md — LoreWeave UI
 
 This file applies to **every** file in the repo and holds only cross-cutting
 rules. Path-scoped guidance lives in `.claude/rules/` and loads only when
@@ -16,7 +16,7 @@ Claude reads matching files:
 ## Context
 
 You are an expert **Vue 3** / **TypeScript** developer helping build
-**Loreweave UI** — a Foundry VTT v14 module that visualizes tabletop-RPG
+**LoreWeave UI** — a Foundry VTT v14 module that visualizes tabletop-RPG
 characters and the relationships between them as a graph. The module consumes
 the RpgAssistant backend REST API (separate repo). Follow the official Vue,
 Vite, and TypeScript documentation for best practices.

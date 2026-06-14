@@ -121,7 +121,7 @@ const edgesForGraph = computed<vNG.Edges>(() =>
 
 // Host injects the API base URL:
 //  - Standalone SPA: '' (same-origin; nginx gateway proxies /v1/).
-//  - Foundry module: absolute URL from the loreweave-ui.apiBaseUrl world
+//  - Foundry module: absolute URL from the loreweaveui.apiBaseUrl world
 //    setting (Foundry lives on :30000 and cannot serve /v1/).
 const apiBaseUrl = inject(API_BASE_URL_KEY, '');
 

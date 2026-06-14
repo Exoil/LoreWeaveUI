@@ -1,22 +1,22 @@
-import { LoreweaveApp } from './LoreweaveApp';
+import { LoreWeaveApp } from './LoreWeaveApp';
 import { MODULE_ID } from './constants';
 
 export { MODULE_ID };
 
 // Single instance — Foundry windows are cheap, but the graph state is
 // expensive to rebuild, so we keep one across open/close cycles.
-let appInstance: LoreweaveApp | null = null;
+let appInstance: LoreWeaveApp | null = null;
 
 function getApiBaseUrl(): string {
   const value = game.settings.get(MODULE_ID, 'apiBaseUrl');
   return typeof value === 'string' ? value : '';
 }
 
-function getApp(): LoreweaveApp {
+function getApp(): LoreWeaveApp {
   // The base URL is captured once on first open. If the GM changes the
   // setting they must close and reopen the window; we don't hot-swap the
   // service URL while a window is alive.
-  if (!appInstance) appInstance = new LoreweaveApp(getApiBaseUrl());
+  if (!appInstance) appInstance = new LoreWeaveApp(getApiBaseUrl());
   return appInstance;
 }
 
@@ -35,7 +35,7 @@ function openWindow(): void {
       (
         globalThis as { ui?: { notifications?: { error?: (m: string) => void } } }
       ).ui?.notifications?.error?.(
-        `Loreweave failed to open: ${String((err as Error)?.message ?? err)}`,
+        `LoreWeave failed to open: ${String((err as Error)?.message ?? err)}`,
       );
     });
   } catch (err) {
@@ -139,8 +139,8 @@ Hooks.on('renderSceneControls', (_app: unknown, html: unknown) => {
   // Foundry tools render with `data-tool="<tool name>"`.
   const btn = root.querySelector(`[data-tool="${MODULE_ID}-open"]`);
   if (!(btn instanceof HTMLElement)) return;
-  if (btn.dataset.loreweaveUiBound === '1') return;
-  btn.dataset.loreweaveUiBound = '1';
+  if (btn.dataset.loreWeaveUiBound === '1') return;
+  btn.dataset.loreWeaveUiBound = '1';
   btn.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -154,4 +154,4 @@ Hooks.once('ready', () => {
   console.log(`[${MODULE_ID}] ready — API base URL:`, getApiBaseUrl());
 });
 
-export { LoreweaveApp };
+export { LoreWeaveApp };

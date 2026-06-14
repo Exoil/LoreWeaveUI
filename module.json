@@ -1,6 +1,6 @@
 {
-  "id": "loreweave-ui",
-  "title": "Loreweave UI",
+  "id": "loreweaveui",
+  "title": "LoreWeave UI",
   "description": "Track tabletop RPG characters and their relationships inside Foundry VTT.",
   "version": "0.1.0",
   "compatibility": {

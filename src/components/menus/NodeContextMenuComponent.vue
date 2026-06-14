@@ -58,7 +58,7 @@ defineExpose({
 
 <template>
   <Teleport to="body">
-    <div class="loreweave-ui-root">
+    <div class="loreweaveui-root">
       <div
         ref="menuEl"
         class="dropdown node-context-dropdown"

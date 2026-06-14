@@ -1,7 +1,7 @@
 {
-  "loreweave-ui.title": "Loreweave",
-  "loreweave-ui.controls.open": "Open Loreweave",
-  "loreweave-ui.controls.tooltip": "Open the character-relationship graph",
-  "loreweave-ui.settings.apiBaseUrl.name": "Backend API base URL",
-  "loreweave-ui.settings.apiBaseUrl.hint": "URL the module uses to reach the RpgAssistant backend API (the nginx gateway). Default points at the local docker-compose gateway."
+  "loreweaveui.title": "LoreWeave",
+  "loreweaveui.controls.open": "Open LoreWeave",
+  "loreweaveui.controls.tooltip": "Open the character-relationship graph",
+  "loreweaveui.settings.apiBaseUrl.name": "Backend API base URL",
+  "loreweaveui.settings.apiBaseUrl.hint": "URL the module uses to reach the RpgAssistant backend API (the nginx gateway). Default points at the local docker-compose gateway."
 }

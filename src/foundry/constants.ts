@@ -1,1 +1,1 @@
-export const MODULE_ID = 'loreweave-ui';
+export const MODULE_ID = 'loreweaveui';

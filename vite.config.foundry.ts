@@ -9,13 +9,13 @@ import vue from '@vitejs/plugin-vue';
 // @ts-expect-error -- no @types/postcss-prefix-selector package exists
 import prefixSelector from 'postcss-prefix-selector';
 
-// Wrap every selector in dist/style.css with `.loreweave-ui-root` so the
+// Wrap every selector in dist/style.css with `.loreweaveui-root` so the
 // bundled Bulma + v-network-graph styles cannot escape and repaint Foundry's
 // own UI.
 //
-// IMPORTANT: scope to the Vue mount host (`.loreweave-ui-root`, the div
-// created in LoreweaveApp._renderHTML), NOT the ApplicationV2 window frame
-// (`.loreweave-ui`, set via `classes: [MODULE_ID]`). Foundry's window header
+// IMPORTANT: scope to the Vue mount host (`.loreweaveui-root`, the div
+// created in LoreWeaveApp._renderHTML), NOT the ApplicationV2 window frame
+// (`.loreweaveui`, set via `classes: [MODULE_ID]`). Foundry's window header
 // — including its close button — lives inside the frame but OUTSIDE the mount
 // host. Scoping to the frame leaks Bulma's `html`/`body`/`button` resets onto
 // that header and the close button disappears; scoping to the host keeps our
@@ -24,7 +24,7 @@ import prefixSelector from 'postcss-prefix-selector';
 // `html`/`body`/`:root` collapse to the prefix itself (you cannot scope a
 // top-level rule to a descendant of itself), and rules already starting with
 // the prefix are left alone so the plugin is idempotent on re-builds.
-const SCOPE = '.loreweave-ui-root';
+const SCOPE = '.loreweaveui-root';
 // Copy module.json and lang/ into dist/ so the entire `dist` directory is a
 // self-contained Foundry module: one bind mount serves the whole thing.
 // (Bind-mounting individual files into a non-existent container path is
@@ -32,7 +32,7 @@ const SCOPE = '.loreweave-ui-root';
 const root = fileURLToPath(new URL('.', import.meta.url));
 function foundryPackagingPlugin(): Plugin {
   return {
-    name: 'loreweave-ui:foundry-packaging',
+    name: 'loreweaveui:foundry-packaging',
     closeBundle() {
       mkdirSync(`${root}/dist`, { recursive: true });
       copyFileSync(`${root}/module.json`, `${root}/dist/module.json`);
@@ -57,7 +57,7 @@ const cssPrefixPlugin = prefixSelector({
 //   dist/main.js  — ES module entry, referenced by module.json -> esmodules
 //   dist/style.css — single CSS bundle, referenced by module.json -> styles
 //
-// `dist/` is bind-mounted at runtime into /data/Data/modules/loreweave-ui
+// `dist/` is bind-mounted at runtime into /data/Data/modules/loreweaveui
 // (read-only) by the foundry service in docker-compose.yaml.
 //
 // Run with:  bun run build:foundry

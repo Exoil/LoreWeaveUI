@@ -14,10 +14,10 @@ const { ApplicationV2 } = foundry.applications.api;
 // ApplicationV2 window that owns one Vue app instance for its lifetime.
 // Vite library mode bundles Vue + v-network-graph + Bulma into the module
 // itself — Foundry does not provide any of these at runtime.
-export class LoreweaveApp extends ApplicationV2 {
+export class LoreWeaveApp extends ApplicationV2 {
   static override DEFAULT_OPTIONS = {
     // Distinct from the module id — using the module id verbatim collides
-    // with selectors Foundry itself uses (`#loreweave-ui` is also where the
+    // with selectors Foundry itself uses (`#loreweaveui` is also where the
     // module's settings panel injects markup).
     id: `${MODULE_ID}-app`,
     window: {
