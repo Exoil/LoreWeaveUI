@@ -3,14 +3,14 @@ export class VersionedKnowRelation {
   public toCharacterId: string;
   public description: string;
   public isStrongRelation: boolean;
-  public version: number;
+  public version: string;
 
   constructor(
     fromCharacterId: string,
     toCharacterId: string,
     description: string,
     isStrongRelation: boolean,
-    version: number,
+    version: string,
   ) {
     this.fromCharacterId = fromCharacterId;
     this.toCharacterId = toCharacterId;

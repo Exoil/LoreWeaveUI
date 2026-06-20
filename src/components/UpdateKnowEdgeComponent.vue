@@ -18,7 +18,7 @@ const emit = defineEmits<{
 
 const description = ref('');
 const isStrongRelation = ref(true);
-const version = ref(0);
+const version = ref('');
 let controller: AbortController | null = null;
 
 function applyRelation(relation: VersionedKnowRelation) {

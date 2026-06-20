@@ -8,7 +8,7 @@ function makeService(overrides: Partial<RpgAssistantService> = {}): RpgAssistant
   return {
     getKnowRelationAsync: vi
       .fn()
-      .mockResolvedValue(new VersionedKnowRelation('char-1', 'char-2', 'old friends', true, 2)),
+      .mockResolvedValue(new VersionedKnowRelation('char-1', 'char-2', 'old friends', true, '2')),
     updateKnowRelationAsync: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   } as unknown as RpgAssistantService;
@@ -78,7 +78,7 @@ describe('UpdateKnowEdgeComponent', () => {
     expect(updateArg.toCharacterId).toBe('char-2');
     expect(updateArg.description).toBe('former allies');
     expect(updateArg.isStrongRelation).toBe(false);
-    expect(updateArg.version).toBe(2);
+    expect(updateArg.version).toBe('2');
   });
 
   it('re-fetches the relation after updating, emits it, and closes', async () => {

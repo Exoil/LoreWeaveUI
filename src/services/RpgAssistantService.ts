@@ -108,12 +108,14 @@ export class RpgAssistantService {
     const response = await this._rpgAssistantClient.getKnowRelationship(fromId, toId, signal);
     const relation = response.result;
 
+    // The relation's version is carried by the ETag response header, not the
+    // body (same as getCharacterAsync).
     return new VersionedKnowRelation(
       relation.fromCharacterId,
       relation.toCharacterId,
       relation.description,
       relation.isStrongRelation,
-      relation.version,
+      response.headers['etag'],
     );
   }
 
@@ -129,7 +131,7 @@ export class RpgAssistantService {
     await this._rpgAssistantClient.updateKnowRelationship(
       update.fromCharacterId,
       update.toCharacterId,
-      String(update.version),
+      update.version,
       body,
       signal,
     );

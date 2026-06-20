@@ -1235,12 +1235,12 @@ export interface IKnowCharacterRelationPayload {
   [key: string]: any;
 }
 
+/** The current version is returned in the ETag response header, not in the body. */
 export class KnowRelationPayload implements IKnowRelationPayload {
   fromCharacterId!: string;
   toCharacterId!: string;
   description!: string;
   isStrongRelation!: boolean;
-  version!: number;
 
   [key: string]: any;
 
@@ -1261,7 +1261,6 @@ export class KnowRelationPayload implements IKnowRelationPayload {
       this.toCharacterId = _data['toCharacterId'];
       this.description = _data['description'];
       this.isStrongRelation = _data['isStrongRelation'];
-      this.version = _data['version'];
     }
   }
 
@@ -1281,17 +1280,16 @@ export class KnowRelationPayload implements IKnowRelationPayload {
     data['toCharacterId'] = this.toCharacterId;
     data['description'] = this.description;
     data['isStrongRelation'] = this.isStrongRelation;
-    data['version'] = this.version;
     return data;
   }
 }
 
+/** The current version is returned in the ETag response header, not in the body. */
 export interface IKnowRelationPayload {
   fromCharacterId: string;
   toCharacterId: string;
   description: string;
   isStrongRelation: boolean;
-  version: number;
 
   [key: string]: any;
 }
