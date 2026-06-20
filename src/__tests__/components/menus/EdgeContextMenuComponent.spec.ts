@@ -73,6 +73,36 @@ describe('EdgeContextMenuComponent', () => {
     expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
   });
 
+  it('choosing update relation emits openUpdateKnowEdgeDialog and closes the menu', async () => {
+    const wrapper = mount(EdgeContextMenuComponent, {
+      props: {
+        rpgAssistantService: makeService(),
+        selectedEdgeId: 'char-1_char-2',
+        edgeIdSeparator: '_',
+      },
+    });
+    (wrapper.vm as unknown as ExposedEdgeMenu).showEdgeContextMenu(makeEdgeEvent());
+    await nextTick();
+
+    await wrapper.find('#edge-context-update-button').trigger('click');
+
+    expect(wrapper.emitted('openUpdateKnowEdgeDialog')).toHaveLength(1);
+    expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
+  });
+
+  it('update relation button is disabled when no edge is selected', () => {
+    const wrapper = mount(EdgeContextMenuComponent, {
+      props: {
+        rpgAssistantService: makeService(),
+        selectedEdgeId: undefined,
+        edgeIdSeparator: '_',
+      },
+    });
+
+    const button = wrapper.find<HTMLButtonElement>('#edge-context-update-button');
+    expect(button.element.disabled).toBe(true);
+  });
+
   it('deleting an edge emits deleteKnowEdgeFromMenu and closes the menu', async () => {
     const service = makeService();
     const wrapper = mount(EdgeContextMenuComponent, {

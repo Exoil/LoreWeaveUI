@@ -6,15 +6,22 @@ import { useContextMenu } from '@/composables/useContextMenu';
 
 const { menuEl, isOpen, pos, showContextMenu, hideMenu } = useContextMenu();
 
-defineProps<{
+const props = defineProps<{
   rpgAssistantService: RpgAssistantService;
   selectedEdgeId: string | undefined;
   edgeIdSeparator: string;
 }>();
 
 const emit = defineEmits<{
+  openUpdateKnowEdgeDialog: [];
   deleteKnowEdgeFromMenu: [createdEdgeId: string];
 }>();
+
+function onUpdateClick() {
+  if (!props.selectedEdgeId) return;
+  emit('openUpdateKnowEdgeDialog');
+  hideMenu();
+}
 
 function onEdgeKnowDeleted(deletedEdgeId: string) {
   emit('deleteKnowEdgeFromMenu', deletedEdgeId);
@@ -45,6 +52,15 @@ defineExpose({
       >
         <div class="dropdown-menu" role="menu">
           <div class="dropdown-content">
+            <button
+              id="edge-context-update-button"
+              class="dropdown-item"
+              type="button"
+              @click="onUpdateClick"
+              :disabled="!selectedEdgeId"
+            >
+              Update relation
+            </button>
             <div class="dropdown-item">
               <DeleteKnowCharacterEdgeComponent
                 :rpgAssistantService="rpgAssistantService"
