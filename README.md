@@ -15,7 +15,7 @@ CSS scope, and i18n keys.
 - Node `^20.19.0 || >=22.12.0` for tooling that shells out to Node
 - A running RpgAssistant backend API reachable from Foundry (default
   `http://localhost:8080`, configurable via the world setting
-  *Backend API base URL*)
+  _Backend API base URL_)
 
 ## Commands
 
@@ -38,9 +38,9 @@ work-flows, mount `dist/` read-only into the Foundry container at
 
 ## Settings
 
-| Setting (id)                       | Scope | Default                  | Purpose                                              |
-| ---------------------------------- | ----- | ------------------------ | ---------------------------------------------------- |
-| `loreweaveui.apiBaseUrl`           | world | `http://localhost:8080`  | URL the module uses to reach the RpgAssistant API.   |
+| Setting (id)             | Scope | Default                 | Purpose                                            |
+| ------------------------ | ----- | ----------------------- | -------------------------------------------------- |
+| `loreweaveui.apiBaseUrl` | world | `http://localhost:8080` | URL the module uses to reach the RpgAssistant API. |
 
 ## Layout
 

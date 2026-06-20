@@ -4,6 +4,7 @@ import type { RpgAssistantService } from '@/services/RpgAssistantService';
 import DeleteCharacterComponent from '@/components/DeleteCharacterComponent.vue';
 import CreateCharacterKnowEdgeComponent from '@/components/CreateCharacterKnowEdgeComponent.vue';
 import { useContextMenu } from '@/composables/useContextMenu';
+import type { KnowEdge } from '@/models/KnowEdge';
 
 const { menuEl, isOpen, pos, showContextMenu, hideMenu } = useContextMenu();
 
@@ -11,14 +12,13 @@ const props = defineProps<{
   rpgAssistantService: RpgAssistantService;
   firstSelectedCharacterId: string | null;
   secondSelectedCharacterId: string | null;
-  edgeIdSeparator: string;
 }>();
 
 const emit = defineEmits<{
   openUpdateCharacterDialog: [];
   openFindPathDialog: [];
   deletedCharacterFromMenu: [deletedCharacterId: string];
-  createKnowEdgeFromMenu: [createdEdgeId: string];
+  createKnowEdgeFromMenu: [edge: KnowEdge];
 }>();
 
 function onUpdateClick() {
@@ -38,8 +38,8 @@ function onCharacterDeleted(deletedCharacterId: string) {
   hideMenu();
 }
 
-function onEdgeKnowCreated(createdEdgeId: string) {
-  emit('createKnowEdgeFromMenu', createdEdgeId);
+function onEdgeKnowCreated(edge: KnowEdge) {
+  emit('createKnowEdgeFromMenu', edge);
   hideMenu();
 }
 
@@ -100,7 +100,6 @@ defineExpose({
                 :rpgAssistantService="rpgAssistantService"
                 :fromNodeId="firstSelectedCharacterId"
                 :targetNodeId="secondSelectedCharacterId"
-                :edgeIdSeparator="edgeIdSeparator"
                 @createKnowEdge="onEdgeKnowCreated"
               />
             </div>

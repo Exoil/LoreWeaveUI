@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { mount, flushPromises, config } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import NodeContextMenuComponent from '@/components/menus/NodeContextMenuComponent.vue';
+import { KnowEdge } from '@/models/KnowEdge';
 import type { RpgAssistantService } from '@/services/RpgAssistantService';
 import type { NodeEvent } from 'v-network-graph';
 
@@ -29,7 +30,6 @@ function defaultProps(overrides = {}) {
     rpgAssistantService: makeService(),
     firstSelectedCharacterId: 'char-1',
     secondSelectedCharacterId: null,
-    edgeIdSeparator: '_',
     ...overrides,
   };
 }
@@ -112,6 +112,10 @@ describe('NodeContextMenuComponent', () => {
     await wrapper.find('#create-know-edge-button').trigger('click');
     await flushPromises();
 
-    expect(wrapper.emitted('createKnowEdgeFromMenu')).toEqual([['char-1_char-2']]);
+    const emitted = wrapper.emitted('createKnowEdgeFromMenu');
+    expect(emitted).toHaveLength(1);
+    const edge = emitted![0]![0] as KnowEdge;
+    expect(edge.source).toBe('char-1');
+    expect(edge.target).toBe('char-2');
   });
 });

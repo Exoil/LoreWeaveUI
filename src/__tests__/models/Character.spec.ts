@@ -1,18 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import { Character } from '@/services/Models/Character';
+import { KnowRelation } from '@/services/Models/KnowRelation';
 
 describe('Character', () => {
-  it('stores id, name, and knowCharacterIds', () => {
-    const char = new Character('1', 'Frodo', ['2', '3']);
+  it('stores id, name, and knowCharacters', () => {
+    const relations = [new KnowRelation('2', 'friends', true), new KnowRelation('3', '', false)];
+    const char = new Character('1', 'Frodo', relations);
 
     expect(char.id).toBe('1');
     expect(char.name).toBe('Frodo');
-    expect(char.knowCharacterIds).toEqual(['2', '3']);
+    expect(char.knowCharacters).toBe(relations);
   });
 
-  it('defaults knowCharacterIds to an empty array when omitted', () => {
+  it('defaults knowCharacters to an empty array when omitted', () => {
     const char = new Character('1', 'Sam');
 
-    expect(char.knowCharacterIds).toEqual([]);
+    expect(char.knowCharacters).toEqual([]);
   });
 });

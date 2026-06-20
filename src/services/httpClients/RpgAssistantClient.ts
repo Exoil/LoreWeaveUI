@@ -79,6 +79,17 @@ export interface IRpgAssistantClient {
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<RelationPathPayload>>;
   /**
+   * Get the knowledge relationship between two characters
+   * @param from Source character identifier
+   * @param to Target character identifier
+   * @return Knowledge relationship found
+   */
+  getKnowRelationship(
+    from: string,
+    to: string,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<KnowRelationPayload>>;
+  /**
    * Update a knowledge relationship between characters
    * @param from Source character identifier
    * @param to Target character identifier
@@ -721,6 +732,95 @@ export class RpgAssistantClient implements IRpgAssistantClient {
   }
 
   /**
+   * Get the knowledge relationship between two characters
+   * @param from Source character identifier
+   * @param to Target character identifier
+   * @return Knowledge relationship found
+   */
+  getKnowRelationship(
+    from: string,
+    to: string,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<KnowRelationPayload>> {
+    let url_ = this.baseUrl + '/v1/characters/knows/{from}/to/{to}';
+    if (from === undefined || from === null)
+      throw new globalThis.Error("The parameter 'from' must be defined.");
+    url_ = url_.replace('{from}', encodeURIComponent('' + from));
+    if (to === undefined || to === null)
+      throw new globalThis.Error("The parameter 'to' must be defined.");
+    url_ = url_.replace('{to}', encodeURIComponent('' + to));
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: AxiosRequestConfig = {
+      method: 'GET',
+      url: url_,
+      headers: {
+        Accept: 'application/json',
+      },
+      signal,
+    };
+
+    return this.instance
+      .request(options_)
+      .catch((_error: any) => {
+        if (isAxiosError(_error) && _error.response) {
+          return _error.response;
+        } else {
+          throw _error;
+        }
+      })
+      .then((_response: AxiosResponse) => {
+        return this.processGetKnowRelationship(_response);
+      });
+  }
+
+  protected processGetKnowRelationship(
+    response: AxiosResponse,
+  ): Promise<SwaggerResponse<KnowRelationPayload>> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && typeof response.headers === 'object') {
+      for (const k in response.headers) {
+        if (response.headers.hasOwnProperty(k)) {
+          _headers[k] = response.headers[k];
+        }
+      }
+    }
+    if (status === 200) {
+      const _responseText = response.data;
+      let result200: any = null;
+      let resultData200 = _responseText;
+      result200 = KnowRelationPayload.fromJS(resultData200);
+      return Promise.resolve<SwaggerResponse<KnowRelationPayload>>(
+        new SwaggerResponse<KnowRelationPayload>(status, _headers, result200),
+      );
+    } else if (status === 404) {
+      const _responseText = response.data;
+      let result404: any = null;
+      let resultData404 = _responseText;
+      result404 = ProblemDetails.fromJS(resultData404);
+      return throwException(
+        'The specified resource was not found',
+        status,
+        _responseText,
+        _headers,
+        result404,
+      );
+    } else if (status !== 200 && status !== 204) {
+      const _responseText = response.data;
+      return throwException(
+        'An unexpected server error occurred.',
+        status,
+        _responseText,
+        _headers,
+      );
+    }
+    return Promise.resolve<SwaggerResponse<KnowRelationPayload>>(
+      new SwaggerResponse(status, _headers, null as any),
+    );
+  }
+
+  /**
    * Update a knowledge relationship between characters
    * @param from Source character identifier
    * @param to Target character identifier
@@ -1131,6 +1231,67 @@ export interface IKnowCharacterRelationPayload {
   characterId: string;
   description: string;
   isStrongRelation: boolean;
+
+  [key: string]: any;
+}
+
+export class KnowRelationPayload implements IKnowRelationPayload {
+  fromCharacterId!: string;
+  toCharacterId!: string;
+  description!: string;
+  isStrongRelation!: boolean;
+  version!: number;
+
+  [key: string]: any;
+
+  constructor(data?: IKnowRelationPayload) {
+    if (data) {
+      for (var property in data) {
+        if (data.hasOwnProperty(property)) (this as any)[property] = (data as any)[property];
+      }
+    }
+  }
+
+  init(_data?: any) {
+    if (_data) {
+      for (var property in _data) {
+        if (_data.hasOwnProperty(property)) this[property] = _data[property];
+      }
+      this.fromCharacterId = _data['fromCharacterId'];
+      this.toCharacterId = _data['toCharacterId'];
+      this.description = _data['description'];
+      this.isStrongRelation = _data['isStrongRelation'];
+      this.version = _data['version'];
+    }
+  }
+
+  static fromJS(data: any): KnowRelationPayload {
+    data = typeof data === 'object' ? data : {};
+    let result = new KnowRelationPayload();
+    result.init(data);
+    return result;
+  }
+
+  toJSON(data?: any) {
+    data = typeof data === 'object' ? data : {};
+    for (var property in this) {
+      if (this.hasOwnProperty(property)) data[property] = this[property];
+    }
+    data['fromCharacterId'] = this.fromCharacterId;
+    data['toCharacterId'] = this.toCharacterId;
+    data['description'] = this.description;
+    data['isStrongRelation'] = this.isStrongRelation;
+    data['version'] = this.version;
+    return data;
+  }
+}
+
+export interface IKnowRelationPayload {
+  fromCharacterId: string;
+  toCharacterId: string;
+  description: string;
+  isStrongRelation: boolean;
+  version: number;
 
   [key: string]: any;
 }

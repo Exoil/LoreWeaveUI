@@ -3,6 +3,7 @@ import { ref, onBeforeMount, onMounted, computed, reactive, inject } from 'vue';
 import { API_BASE_URL_KEY } from '@/foundry/injection-keys';
 import { CharacterNode } from '@/models/CharacterNode';
 import { KnowEdge } from '@/models/KnowEdge';
+import { KnowRelation } from '@/services/Models/KnowRelation';
 import * as vNG from 'v-network-graph';
 import { RpgAssistantService } from '@/services/RpgAssistantService';
 import { PageQuery } from '@/services/Models/PageQuery';
@@ -94,6 +95,14 @@ const nodesForGraph = computed<vNG.Nodes>(() =>
     ]),
   ),
 );
+// Edge labels only show the opening of the description so long relation notes
+// don't overflow the graph; the full text lives on the relation itself.
+const DESCRIPTION_LABEL_MAX_LENGTH = 20;
+function truncateDescription(description: string): string {
+  if (description.length <= DESCRIPTION_LABEL_MAX_LENGTH) return description;
+  return description.slice(0, DESCRIPTION_LABEL_MAX_LENGTH) + '…';
+}
+
 const edges = ref<KnowEdge[]>([]);
 const edgesForGraph = computed<vNG.Edges>(() =>
   Object.fromEntries(
@@ -113,6 +122,8 @@ const edgesForGraph = computed<vNG.Edges>(() =>
           target: e.target,
           highlighted: highlightedEdgeKeys.value.has(key),
           connectsSelected,
+          isStrong: e.isStrongRelation,
+          label: truncateDescription(e.description),
         },
       ];
     }),
@@ -133,8 +144,10 @@ onBeforeMount(() => {
 function loadData(result: Character[]) {
   nodeList.value = result.map((c) => new CharacterNode(c));
   nodeList.value.forEach((n) => {
-    n.characterData.knowCharacterIds.forEach((knowId) => {
-      edges.value.push(new KnowEdge(n.id, knowId));
+    n.characterData.knowCharacters.forEach((relation) => {
+      edges.value.push(
+        new KnowEdge(n.id, relation.characterId, relation.description, relation.isStrongRelation),
+      );
     });
   });
 }
@@ -154,6 +167,7 @@ const FIRST_SELECTED_STROKE_COLOR = '#16a34a';
 const SECOND_SELECTED_STROKE_COLOR = '#14532d';
 const SELECTED_PAIR_EDGE_COLOR = '#22c55e';
 const SELECTED_STROKE_WIDTH = 4;
+const WEAK_EDGE_DASHARRAY = '6 4';
 
 function setupGraphConfig() {
   graphConfiguration.node.selectable = 2;
@@ -175,6 +189,9 @@ function setupGraphConfig() {
   };
   graphConfiguration.edge.normal.width = (edge) =>
     edge.connectsSelected || edge.highlighted ? 3 : 1;
+  // Weak relations render as a dashed line; strong relations stay solid.
+  graphConfiguration.edge.normal.dasharray = (edge) =>
+    edge.isStrong ? undefined : WEAK_EDGE_DASHARRAY;
   graphConfiguration.edge.type = 'straight';
   graphConfiguration.edge.marker.source.type = 'none';
   graphConfiguration.edge.marker.target.type = 'arrow';
@@ -293,12 +310,13 @@ function onEdgeKnowDeleted(deletedEdgeId: string) {
   edges.value.splice(idx, 1);
 }
 
-function onEdgeKnowCreated(createdEdgeId: string) {
-  const [fromId, toId] = createdEdgeId.split(EdgeIdSeparator);
-  const foundNodeIndex = nodeList.value.findIndex((n) => n.id === fromId);
+function onEdgeKnowCreated(edge: KnowEdge) {
+  const foundNodeIndex = nodeList.value.findIndex((n) => n.id === edge.source);
   if (foundNodeIndex === -1) return;
-  nodeList.value[foundNodeIndex]!.characterData.knowCharacterIds.push(toId!);
-  edges.value.push(new KnowEdge(fromId!, toId!));
+  nodeList.value[foundNodeIndex]!.characterData.knowCharacters.push(
+    new KnowRelation(edge.target, edge.description, edge.isStrongRelation),
+  );
+  edges.value.push(edge);
 }
 
 // --- Event handlers --- //
@@ -374,13 +392,23 @@ const eventHandlers: vNG.EventHandlers = {
       :event-handlers="eventHandlers"
       v-model:selected-nodes="selectedNodeIds"
       v-model:selected-edges="selectedEdgeIds"
-    />
+    >
+      <template #edge-label="{ edge, ...slotProps }">
+        <v-edge-label
+          :text="edge.label"
+          align="center"
+          vertical-align="above"
+          fill="#374151"
+          :font-size="11"
+          v-bind="slotProps"
+        />
+      </template>
+    </v-network-graph>
     <NodeContextMenuComponent
       ref="nodeMenuRef"
       :rpgAssistantService="rpgAssistantService"
       :firstSelectedCharacterId="firstSelectedNodeId"
       :secondSelectedCharacterId="secondSelectedNodeId"
-      :edgeIdSeparator="EdgeIdSeparator"
       @openUpdateCharacterDialog="openUpdateDialog"
       @openFindPathDialog="openFindPathDialog"
       @deletedCharacterFromMenu="onCharacterDeleted"
