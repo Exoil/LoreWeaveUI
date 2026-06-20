@@ -25,9 +25,9 @@ export interface IRpgAssistantClient {
     pageSize: number,
     sortType: string,
     sortOrder: string,
-    nameFilter?: string | undefined,
+    nameFilter: string | undefined,
     signal?: AbortSignal,
-  ): Promise<SwaggerResponse<CharacterPayload[]>>;
+  ): Promise<SwaggerResponse<CharacterPayloadWithRelations[]>>;
   /**
    * Create a character
    * @return Created
@@ -75,9 +75,23 @@ export interface IRpgAssistantClient {
   findRelationBetweenCharacters(
     from: string,
     to: string,
-    maxHops?: number | undefined,
+    maxHops: number | undefined,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<RelationPathPayload>>;
+  /**
+   * Update a knowledge relationship between characters
+   * @param from Source character identifier
+   * @param to Target character identifier
+   * @param if_Match The ETag version of the character (integer)
+   * @return No Content
+   */
+  updateKnowRelationship(
+    from: string,
+    to: string,
+    if_Match: string,
+    body: UpdateKnowsDto,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<void>>;
   /**
    * Delete a knowledge relationship
    * @return No Content
@@ -114,9 +128,9 @@ export class RpgAssistantClient implements IRpgAssistantClient {
     pageSize: number,
     sortType: string,
     sortOrder: string,
-    nameFilter?: string | undefined,
+    nameFilter: string | undefined,
     signal?: AbortSignal,
-  ): Promise<SwaggerResponse<CharacterPayload[]>> {
+  ): Promise<SwaggerResponse<CharacterPayloadWithRelations[]>> {
     let url_ = this.baseUrl + '/v1/characters?';
     if (pageNumber === undefined || pageNumber === null)
       throw new globalThis.Error("The parameter 'pageNumber' must be defined and cannot be null.");
@@ -161,7 +175,7 @@ export class RpgAssistantClient implements IRpgAssistantClient {
 
   protected processGetPagedCharacters(
     response: AxiosResponse,
-  ): Promise<SwaggerResponse<CharacterPayload[]>> {
+  ): Promise<SwaggerResponse<CharacterPayloadWithRelations[]>> {
     const status = response.status;
     let _headers: any = {};
     if (response.headers && typeof response.headers === 'object') {
@@ -177,12 +191,12 @@ export class RpgAssistantClient implements IRpgAssistantClient {
       let resultData200 = _responseText;
       if (Array.isArray(resultData200)) {
         result200 = [] as any;
-        for (let item of resultData200) result200!.push(CharacterPayload.fromJS(item));
+        for (let item of resultData200) result200!.push(CharacterPayloadWithRelations.fromJS(item));
       } else {
         result200 = null as any;
       }
-      return Promise.resolve<SwaggerResponse<CharacterPayload[]>>(
-        new SwaggerResponse<CharacterPayload[]>(status, _headers, result200),
+      return Promise.resolve<SwaggerResponse<CharacterPayloadWithRelations[]>>(
+        new SwaggerResponse<CharacterPayloadWithRelations[]>(status, _headers, result200),
       );
     } else if (status === 400) {
       const _responseText = response.data;
@@ -199,7 +213,7 @@ export class RpgAssistantClient implements IRpgAssistantClient {
         _headers,
       );
     }
-    return Promise.resolve<SwaggerResponse<CharacterPayload[]>>(
+    return Promise.resolve<SwaggerResponse<CharacterPayloadWithRelations[]>>(
       new SwaggerResponse(status, _headers, null as any),
     );
   }
@@ -623,7 +637,7 @@ export class RpgAssistantClient implements IRpgAssistantClient {
   findRelationBetweenCharacters(
     from: string,
     to: string,
-    maxHops?: number | undefined,
+    maxHops: number | undefined,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<RelationPathPayload>> {
     let url_ = this.baseUrl + '/v1/characters/path/{from}/to/{to}?';
@@ -702,6 +716,109 @@ export class RpgAssistantClient implements IRpgAssistantClient {
       );
     }
     return Promise.resolve<SwaggerResponse<RelationPathPayload>>(
+      new SwaggerResponse(status, _headers, null as any),
+    );
+  }
+
+  /**
+   * Update a knowledge relationship between characters
+   * @param from Source character identifier
+   * @param to Target character identifier
+   * @param if_Match The ETag version of the character (integer)
+   * @return No Content
+   */
+  updateKnowRelationship(
+    from: string,
+    to: string,
+    if_Match: string,
+    body: UpdateKnowsDto,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<void>> {
+    let url_ = this.baseUrl + '/v1/characters/knows/{from}/to/{to}';
+    if (from === undefined || from === null)
+      throw new globalThis.Error("The parameter 'from' must be defined.");
+    url_ = url_.replace('{from}', encodeURIComponent('' + from));
+    if (to === undefined || to === null)
+      throw new globalThis.Error("The parameter 'to' must be defined.");
+    url_ = url_.replace('{to}', encodeURIComponent('' + to));
+    url_ = url_.replace(/[?&]$/, '');
+
+    const content_ = JSON.stringify(body);
+
+    let options_: AxiosRequestConfig = {
+      data: content_,
+      method: 'PUT',
+      url: url_,
+      headers: {
+        'If-Match': if_Match !== undefined && if_Match !== null ? '' + if_Match : '',
+        'Content-Type': 'application/json',
+      },
+      signal,
+    };
+
+    return this.instance
+      .request(options_)
+      .catch((_error: any) => {
+        if (isAxiosError(_error) && _error.response) {
+          return _error.response;
+        } else {
+          throw _error;
+        }
+      })
+      .then((_response: AxiosResponse) => {
+        return this.processUpdateKnowRelationship(_response);
+      });
+  }
+
+  protected processUpdateKnowRelationship(response: AxiosResponse): Promise<SwaggerResponse<void>> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && typeof response.headers === 'object') {
+      for (const k in response.headers) {
+        if (response.headers.hasOwnProperty(k)) {
+          _headers[k] = response.headers[k];
+        }
+      }
+    }
+    if (status === 204) {
+      const _responseText = response.data;
+      return Promise.resolve<SwaggerResponse<void>>(
+        new SwaggerResponse<void>(status, _headers, null as any),
+      );
+    } else if (status === 400) {
+      const _responseText = response.data;
+      let result400: any = null;
+      let resultData400 = _responseText;
+      result400 = ProblemDetails.fromJS(resultData400);
+      return throwException('Bad Request', status, _responseText, _headers, result400);
+    } else if (status === 404) {
+      const _responseText = response.data;
+      let result404: any = null;
+      let resultData404 = _responseText;
+      result404 = ProblemDetails.fromJS(resultData404);
+      return throwException(
+        'The specified resource was not found',
+        status,
+        _responseText,
+        _headers,
+        result404,
+      );
+    } else if (status === 412) {
+      const _responseText = response.data;
+      let result412: any = null;
+      let resultData412 = _responseText;
+      result412 = ProblemDetails.fromJS(resultData412);
+      return throwException('Precondition Failed', status, _responseText, _headers, result412);
+    } else if (status !== 200 && status !== 204) {
+      const _responseText = response.data;
+      return throwException(
+        'An unexpected server error occurred.',
+        status,
+        _responseText,
+        _headers,
+      );
+    }
+    return Promise.resolve<SwaggerResponse<void>>(
       new SwaggerResponse(status, _headers, null as any),
     );
   }
@@ -788,11 +905,11 @@ export class RpgAssistantClient implements IRpgAssistantClient {
 }
 
 export class ProblemDetails implements IProblemDetails {
-  type?: string | undefined;
-  title?: string | undefined;
-  status?: number | undefined;
-  detail?: string | undefined;
-  instance?: string | undefined;
+  type!: string | undefined;
+  title!: string | undefined;
+  status!: number | undefined;
+  detail!: string | undefined;
+  instance!: string | undefined;
 
   [key: string]: any;
 
@@ -839,11 +956,11 @@ export class ProblemDetails implements IProblemDetails {
 }
 
 export interface IProblemDetails {
-  type?: string | undefined;
-  title?: string | undefined;
-  status?: number | undefined;
-  detail?: string | undefined;
-  instance?: string | undefined;
+  type: string | undefined;
+  title: string | undefined;
+  status: number | undefined;
+  detail: string | undefined;
+  instance: string | undefined;
 
   [key: string]: any;
 }
@@ -901,21 +1018,21 @@ export interface ICharacterDto {
   [key: string]: any;
 }
 
-export class CharacterPayload implements ICharacterPayload {
+export class CharacterPayloadWithRelations implements ICharacterPayloadWithRelations {
   id!: string;
   name!: string;
-  knowCharacterIds!: string[];
+  knowCharacters!: KnowCharacterRelationPayload[];
 
   [key: string]: any;
 
-  constructor(data?: ICharacterPayload) {
+  constructor(data?: ICharacterPayloadWithRelations) {
     if (data) {
       for (var property in data) {
         if (data.hasOwnProperty(property)) (this as any)[property] = (data as any)[property];
       }
     }
     if (!data) {
-      this.knowCharacterIds = [];
+      this.knowCharacters = [];
     }
   }
 
@@ -926,16 +1043,17 @@ export class CharacterPayload implements ICharacterPayload {
       }
       this.id = _data['id'];
       this.name = _data['name'];
-      if (Array.isArray(_data['knowCharacterIds'])) {
-        this.knowCharacterIds = [] as any;
-        for (let item of _data['knowCharacterIds']) this.knowCharacterIds!.push(item);
+      if (Array.isArray(_data['knowCharacters'])) {
+        this.knowCharacters = [] as any;
+        for (let item of _data['knowCharacters'])
+          this.knowCharacters!.push(KnowCharacterRelationPayload.fromJS(item));
       }
     }
   }
 
-  static fromJS(data: any): CharacterPayload {
+  static fromJS(data: any): CharacterPayloadWithRelations {
     data = typeof data === 'object' ? data : {};
-    let result = new CharacterPayload();
+    let result = new CharacterPayloadWithRelations();
     result.init(data);
     return result;
   }
@@ -947,18 +1065,72 @@ export class CharacterPayload implements ICharacterPayload {
     }
     data['id'] = this.id;
     data['name'] = this.name;
-    if (Array.isArray(this.knowCharacterIds)) {
-      data['knowCharacterIds'] = [];
-      for (let item of this.knowCharacterIds) data['knowCharacterIds'].push(item);
+    if (Array.isArray(this.knowCharacters)) {
+      data['knowCharacters'] = [];
+      for (let item of this.knowCharacters)
+        data['knowCharacters'].push(item ? item.toJSON() : (undefined as any));
     }
     return data;
   }
 }
 
-export interface ICharacterPayload {
+export interface ICharacterPayloadWithRelations {
   id: string;
   name: string;
-  knowCharacterIds: string[];
+  knowCharacters: KnowCharacterRelationPayload[];
+
+  [key: string]: any;
+}
+
+export class KnowCharacterRelationPayload implements IKnowCharacterRelationPayload {
+  characterId!: string;
+  description!: string;
+  isStrongRelation!: boolean;
+
+  [key: string]: any;
+
+  constructor(data?: IKnowCharacterRelationPayload) {
+    if (data) {
+      for (var property in data) {
+        if (data.hasOwnProperty(property)) (this as any)[property] = (data as any)[property];
+      }
+    }
+  }
+
+  init(_data?: any) {
+    if (_data) {
+      for (var property in _data) {
+        if (_data.hasOwnProperty(property)) this[property] = _data[property];
+      }
+      this.characterId = _data['characterId'];
+      this.description = _data['description'];
+      this.isStrongRelation = _data['isStrongRelation'];
+    }
+  }
+
+  static fromJS(data: any): KnowCharacterRelationPayload {
+    data = typeof data === 'object' ? data : {};
+    let result = new KnowCharacterRelationPayload();
+    result.init(data);
+    return result;
+  }
+
+  toJSON(data?: any) {
+    data = typeof data === 'object' ? data : {};
+    for (var property in this) {
+      if (this.hasOwnProperty(property)) data[property] = this[property];
+    }
+    data['characterId'] = this.characterId;
+    data['description'] = this.description;
+    data['isStrongRelation'] = this.isStrongRelation;
+    return data;
+  }
+}
+
+export interface IKnowCharacterRelationPayload {
+  characterId: string;
+  description: string;
+  isStrongRelation: boolean;
 
   [key: string]: any;
 }
@@ -1119,6 +1291,7 @@ export class CreateKnowsDto implements ICreateKnowsDto {
   fromCharacterId!: string;
   toCharacterId!: string;
   description!: string;
+  isStrongRelation!: boolean;
 
   [key: string]: any;
 
@@ -1138,6 +1311,7 @@ export class CreateKnowsDto implements ICreateKnowsDto {
       this.fromCharacterId = _data['fromCharacterId'];
       this.toCharacterId = _data['toCharacterId'];
       this.description = _data['description'];
+      this.isStrongRelation = _data['isStrongRelation'];
     }
   }
 
@@ -1156,6 +1330,7 @@ export class CreateKnowsDto implements ICreateKnowsDto {
     data['fromCharacterId'] = this.fromCharacterId;
     data['toCharacterId'] = this.toCharacterId;
     data['description'] = this.description;
+    data['isStrongRelation'] = this.isStrongRelation;
     return data;
   }
 }
@@ -1164,6 +1339,56 @@ export interface ICreateKnowsDto {
   fromCharacterId: string;
   toCharacterId: string;
   description: string;
+  isStrongRelation: boolean;
+
+  [key: string]: any;
+}
+
+export class UpdateKnowsDto implements IUpdateKnowsDto {
+  description!: string;
+  isStrongRelation!: boolean;
+
+  [key: string]: any;
+
+  constructor(data?: IUpdateKnowsDto) {
+    if (data) {
+      for (var property in data) {
+        if (data.hasOwnProperty(property)) (this as any)[property] = (data as any)[property];
+      }
+    }
+  }
+
+  init(_data?: any) {
+    if (_data) {
+      for (var property in _data) {
+        if (_data.hasOwnProperty(property)) this[property] = _data[property];
+      }
+      this.description = _data['description'];
+      this.isStrongRelation = _data['isStrongRelation'];
+    }
+  }
+
+  static fromJS(data: any): UpdateKnowsDto {
+    data = typeof data === 'object' ? data : {};
+    let result = new UpdateKnowsDto();
+    result.init(data);
+    return result;
+  }
+
+  toJSON(data?: any) {
+    data = typeof data === 'object' ? data : {};
+    for (var property in this) {
+      if (this.hasOwnProperty(property)) data[property] = this[property];
+    }
+    data['description'] = this.description;
+    data['isStrongRelation'] = this.isStrongRelation;
+    return data;
+  }
+}
+
+export interface IUpdateKnowsDto {
+  description: string;
+  isStrongRelation: boolean;
 
   [key: string]: any;
 }
