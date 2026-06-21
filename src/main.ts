@@ -1,3 +1,8 @@
+/**
+ * Standalone SPA entry point: bootstraps the Vue app, router, and
+ * v-network-graph, and mounts onto `#app`. The Foundry-module build bypasses
+ * this file entirely and bootstraps from `src/foundry/main.ts`.
+ */
 import { createApp } from 'vue';
 import App from './App.vue';
 import router from './router';

@@ -3,11 +3,27 @@ import type { Character } from '@/services/Models/Character';
 import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 
 export interface UsePaginatedCharacterSearchOptions {
+  /** Page size for each backend request (default 10). */
   pageSize?: number;
+  /** Debounce applied to the `query` ref before fetching (ms, default 250). */
   debounceMs?: number;
+  /** Optional id to drop from results, e.g. the "from" character in path search. */
   excludeId?: () => string | null | undefined;
 }
 
+/**
+ * Debounced, infinite-scroll character search backed by
+ * {@link LoreWeaveApiService.searchCharactersByNameAsync}.
+ *
+ * Writing to the returned `query` ref triggers a debounced reset + fetch of
+ * page 1; `loadMore()` appends the next page. Each fetch aborts the previous
+ * in-flight request, and cancellation errors are swallowed.
+ *
+ * @param service the API service to query.
+ * @param options page size, debounce, and an optional id to exclude.
+ * @returns `query`, the (filtered) `items`, `loading` / `hasMore` flags,
+ *   `loadMore`, and `reset` / `cancel` cleanup helpers.
+ */
 export function usePaginatedCharacterSearch(
   service: LoreWeaveApiService,
   options: UsePaginatedCharacterSearchOptions = {},
@@ -30,6 +46,7 @@ export function usePaginatedCharacterSearch(
     return items.value.filter((c) => c.id !== excluded);
   });
 
+  /** Abort any in-flight request and clear results back to the empty state. */
   function reset() {
     controller?.abort();
     controller = null;
@@ -39,6 +56,7 @@ export function usePaginatedCharacterSearch(
     loading.value = false;
   }
 
+  /** Fetch one page; page 1 replaces results, later pages append. */
   async function fetchPage(page: number) {
     controller?.abort();
     controller = new AbortController();
@@ -66,6 +84,7 @@ export function usePaginatedCharacterSearch(
     }
   }
 
+  /** Fetch and append the next page, unless already loading or at the end. */
   async function loadMore() {
     if (loading.value || !hasMore.value) return;
     await fetchPage(pageNumber.value + 1);
@@ -83,6 +102,7 @@ export function usePaginatedCharacterSearch(
     }, debounceMs);
   });
 
+  /** Cancel the pending debounce and abort any in-flight request (call on unmount). */
   function cancel() {
     if (debounceTimer) clearTimeout(debounceTimer);
     controller?.abort();

@@ -1,3 +1,7 @@
+/**
+ * A character together with its `version` (the ETag from the response header).
+ * The version is required to perform a later concurrency-checked update.
+ */
 export class VersionedCharacter {
   public id: string;
   public name: string;

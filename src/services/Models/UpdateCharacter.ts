@@ -1,3 +1,8 @@
+/**
+ * Payload to rename a character. `version` is the ETag last read for the
+ * character; the backend uses it for an optimistic-concurrency check and rejects
+ * the update if the character changed since.
+ */
 export class UpdateCharacter {
   public id: string;
   public name: string;

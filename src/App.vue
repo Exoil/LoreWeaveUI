@@ -1,4 +1,11 @@
 <script setup lang="ts">
+/**
+ * Root screen: renders the character/relationship graph and hosts every modal
+ * and context menu. Intentionally thin — graph styling, state, data and pointer
+ * handling live in the `useGraph*` composables (see `.claude/rules/app-graph.md`).
+ * This component just news up the API service, loads the initial data, holds the
+ * modal open/close flags, and wires composables ↔ child components.
+ */
 import { ref, onBeforeMount, onMounted, inject } from 'vue';
 import { API_BASE_URL_KEY } from '@/foundry/injection-keys';
 import { LoreWeaveApiService } from '@/services/LoreWeaveApiService';

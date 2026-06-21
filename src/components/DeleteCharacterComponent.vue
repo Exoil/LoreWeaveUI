@@ -1,4 +1,9 @@
 <script setup lang="ts">
+/**
+ * Delete-character action button (embedded in the node context menu).
+ * Emits `deletedCharacter` with the id after the backend delete succeeds.
+ * Disabled when there is no `characterId`.
+ */
 import { onBeforeUnmount } from 'vue';
 import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 

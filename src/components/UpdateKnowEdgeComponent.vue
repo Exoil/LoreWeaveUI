@@ -1,4 +1,11 @@
 <script setup lang="ts">
+/**
+ * Modal to edit a relation's description/strength.
+ * - Loads the current relation (and its ETag `version`) each time it opens.
+ * - After saving it re-reads the relation so the UI reflects what was persisted
+ *   (including the new version) rather than the local form state.
+ * - Emits `updatedKnowEdge` with the refreshed {@link VersionedKnowRelation}.
+ */
 import { onBeforeUnmount, ref, watch } from 'vue';
 import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { UpdateKnowRelation } from '@/services/Models/UpdateKnowRelation';
@@ -21,12 +28,14 @@ const isStrongRelation = ref(true);
 const version = ref('');
 let controller: AbortController | null = null;
 
+/** Copy a fetched relation into the local form refs. */
 function applyRelation(relation: VersionedKnowRelation) {
   description.value = relation.description;
   isStrongRelation.value = relation.isStrongRelation;
   version.value = relation.version;
 }
 
+/** Fetch the current relation (+ version) into the form, aborting any prior load. */
 async function loadRelation(fromId: string, toId: string) {
   controller?.abort();
   controller = new AbortController();

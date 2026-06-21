@@ -1,4 +1,9 @@
 <script setup lang="ts">
+/**
+ * Delete-relation action button (embedded in the edge context menu). The `edgeId`
+ * encodes both endpoints (`<fromId><sep><toId>`); it is split on `edgeIdSeparator`
+ * to address the relation. Emits `deletedKnowEdge` with the edge id on success.
+ */
 import { onBeforeUnmount } from 'vue';
 import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 

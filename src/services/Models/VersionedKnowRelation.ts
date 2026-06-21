@@ -1,3 +1,7 @@
+/**
+ * A relation together with its `version` (the ETag from the response header),
+ * required to perform a later concurrency-checked update.
+ */
 export class VersionedKnowRelation {
   public fromCharacterId: string;
   public toCharacterId: string;

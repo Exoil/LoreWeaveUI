@@ -13,13 +13,13 @@ controller that news up its dependencies and connects them to the view.
 
 ## What lives where
 
-| File                                  | Responsibility                                                                                                                                |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `App.vue`                             | Creates `LoreWeaveApiService`, loads the initial data on mount, holds modal open/close flags + their `open*` guards, and lays out the template. |
-| `composables/useGraphConfiguration.ts`| Builds the `<v-network-graph>` config: all node/edge colours, widths, dash styles, and the d3-force layout. Pure styling — no app state.       |
-| `composables/useGraphSelection.ts`    | Owns selection state (up to two nodes + one edge), the `v-model` array bindings, the split edge endpoint ids, and `clearSelection()`. Exports `EDGE_ID_SEPARATOR` and the `GraphSelection` type. |
-| `composables/useGraphData.ts`         | Owns the graph data (`nodeList`, `edges`, highlighted path), projects it into `Nodes`/`Edges` for the graph, and exposes every create/update/delete/path mutation handler. Depends on `GraphSelection`. |
-| `composables/useGraphInteractions.ts` | Turns raw graph pointer events into selection changes + context-menu openings, and bundles them into the `eventHandlers` object. Depends on `GraphSelection` and the menu component refs. |
+| File                                   | Responsibility                                                                                                                                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `App.vue`                              | Creates `LoreWeaveApiService`, loads the initial data on mount, holds modal open/close flags + their `open*` guards, and lays out the template.                                                         |
+| `composables/useGraphConfiguration.ts` | Builds the `<v-network-graph>` config: all node/edge colours, widths, dash styles, and the d3-force layout. Pure styling — no app state.                                                                |
+| `composables/useGraphSelection.ts`     | Owns selection state (up to two nodes + one edge), the `v-model` array bindings, the split edge endpoint ids, and `clearSelection()`. Exports `EDGE_ID_SEPARATOR` and the `GraphSelection` type.        |
+| `composables/useGraphData.ts`          | Owns the graph data (`nodeList`, `edges`, highlighted path), projects it into `Nodes`/`Edges` for the graph, and exposes every create/update/delete/path mutation handler. Depends on `GraphSelection`. |
+| `composables/useGraphInteractions.ts`  | Turns raw graph pointer events into selection changes + context-menu openings, and bundles them into the `eventHandlers` object. Depends on `GraphSelection` and the menu component refs.               |
 
 ## Dependency direction
 

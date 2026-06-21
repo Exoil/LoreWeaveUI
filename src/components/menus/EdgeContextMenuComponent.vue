@@ -1,4 +1,9 @@
 <script setup lang="ts">
+/**
+ * Right-click context menu for a graph edge (relation). Offers update + delete
+ * for the `selectedEdgeId`. Opened imperatively by the parent via the exposed
+ * {@link showEdgeContextMenu}.
+ */
 import * as vNG from 'v-network-graph';
 import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import DeleteKnowCharacterEdgeComponent from '@/components/DeleteKnowCharacterEdgeComponent.vue';
@@ -29,6 +34,7 @@ function onEdgeKnowDeleted(deletedEdgeId: string) {
   hideMenu();
 }
 
+/** Open the menu at the edge event (suppressing the browser's native menu). */
 function showEdgeContextMenu(params: vNG.EdgeEvent<MouseEvent>) {
   const { event } = params;
   event.stopPropagation();

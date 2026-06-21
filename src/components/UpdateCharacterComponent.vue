@@ -1,4 +1,10 @@
 <script setup lang="ts">
+/**
+ * Modal to rename a character.
+ * - Loads the current character (and its ETag `version`) whenever `characterId`
+ *   changes, so the update carries the right version for concurrency.
+ * - Emits `updatedCharacter` with the {@link VersionedCharacter} on success.
+ */
 import { onBeforeUnmount, ref, watch } from 'vue';
 import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { UpdateCharacter } from '@/services/Models/UpdateCharacter';
@@ -40,6 +46,7 @@ function onClickCancel() {
   open.value = false;
 }
 
+/** Fetch the character + its version into the form (aborting any prior load). */
 async function loadCharacterById(id: string) {
   controller?.abort();
   controller = new AbortController();

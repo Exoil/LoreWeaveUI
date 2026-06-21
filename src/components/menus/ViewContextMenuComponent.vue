@@ -1,4 +1,9 @@
 <script setup lang="ts">
+/**
+ * Right-click context menu for empty graph canvas. Offers the create-character
+ * action. Opened imperatively by the parent via the exposed
+ * {@link showViewContextMenu}.
+ */
 import * as vNG from 'v-network-graph';
 import ContextMenuRoot from '@/components/menus/ContextMenuRoot.vue';
 import { useContextMenu } from '@/composables/useContextMenu';
@@ -14,6 +19,7 @@ function onCreateClick() {
   hideMenu();
 }
 
+/** Open the menu at the view event (suppressing the browser's native menu). */
 function showViewContextMenu(params: vNG.ViewEvent<MouseEvent>) {
   const { event } = params;
   event.stopPropagation();

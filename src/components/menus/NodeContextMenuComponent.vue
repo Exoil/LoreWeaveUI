@@ -1,4 +1,10 @@
 <script setup lang="ts">
+/**
+ * Right-click context menu for a graph node (character). Offers update, find-path,
+ * delete, and create-relation actions; each is disabled unless the required
+ * selection is present (the create-relation action needs two selected nodes).
+ * Opened imperatively by the parent via the exposed {@link showNodeContextMenu}.
+ */
 import * as vNG from 'v-network-graph';
 import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import DeleteCharacterComponent from '@/components/DeleteCharacterComponent.vue';
@@ -43,6 +49,7 @@ function onCreateKnowEdgeClick() {
   hideMenu();
 }
 
+/** Open the menu at the node event (suppressing the browser's native menu). */
 function showNodeContextMenu(params: vNG.NodeEvent<MouseEvent>) {
   const { event } = params;
   event.stopPropagation();

@@ -1,3 +1,7 @@
+/**
+ * Paging + sorting parameters for a list request to the backend.
+ * `sortType` is the field name (e.g. `'name'`); `sortOrder` is `'Asc'`/`'Desc'`.
+ */
 export class PageQuery {
   pageNumber: number;
   pageSize: number;

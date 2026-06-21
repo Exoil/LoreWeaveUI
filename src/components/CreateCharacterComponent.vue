@@ -1,4 +1,10 @@
 <script setup lang="ts">
+/**
+ * Modal to create a character node.
+ * - `v-model:open` controls visibility.
+ * - Emits `characterCreated` with the new {@link CharacterNode} after the backend
+ *   call succeeds, then clears the form and closes.
+ */
 import { onBeforeUnmount, ref } from 'vue';
 import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { CharacterNode } from '@/models/CharacterNode';
@@ -17,6 +23,7 @@ const emit = defineEmits<{
 let controller: AbortController | null = null;
 const characterCreateName = ref('');
 
+/** Create the character on the backend, emit the new node, then reset + close. */
 async function onClickCreateCharacter() {
   controller?.abort();
   controller = new AbortController();

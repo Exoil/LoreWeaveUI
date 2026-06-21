@@ -13,6 +13,7 @@ declare global {
     callAll(event: string, ...args: unknown[]): boolean;
   };
 
+  /** Narrow shim of Foundry's global `game` object — only the parts we use. */
   interface FoundryGame {
     modules: Map<string, { id: string; active: boolean; api?: unknown }>;
     settings: {
@@ -61,8 +62,10 @@ declare global {
     }
   }
 
-  // Hook payload for `getSceneControlButtons` (Foundry passes the controls
-  // array in-place for the module to mutate).
+  /**
+   * Hook payload for `getSceneControlButtons` (Foundry passes the controls
+   * array in-place for the module to mutate by pushing/adding tools).
+   */
   interface FoundrySceneControl {
     name: string;
     title: string;
