@@ -40,7 +40,7 @@ work-flows, mount `dist/` read-only into the Foundry container at
 
 | Setting (id)             | Scope | Default                 | Purpose                                            |
 | ------------------------ | ----- | ----------------------- | -------------------------------------------------- |
-| `loreweaveui.apiBaseUrl` | world | `http://localhost:8080` | URL the module uses to reach the RpgAssistant API. |
+| `loreweaveui.apiBaseUrl` | world | `http://localhost:8080` | URL the module uses to reach the LoreWeave API. |
 
 ## Layout
 
