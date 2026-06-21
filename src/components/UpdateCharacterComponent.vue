@@ -1,11 +1,17 @@
 <script setup lang="ts">
+/**
+ * Modal to rename a character.
+ * - Loads the current character (and its ETag `version`) whenever `characterId`
+ *   changes, so the update carries the right version for concurrency.
+ * - Emits `updatedCharacter` with the {@link VersionedCharacter} on success.
+ */
 import { onBeforeUnmount, ref, watch } from 'vue';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { UpdateCharacter } from '@/services/Models/UpdateCharacter';
 import { VersionedCharacter } from '@/services/Models/VersionedCharacter';
 
 const props = defineProps<{
-  rpgAssistantService: RpgAssistantService;
+  loreWeaveApiService: LoreWeaveApiService;
   characterId: string | null;
 }>();
 
@@ -23,7 +29,7 @@ async function onClickUpdateCharacter() {
   controller = new AbortController();
 
   const signal = controller.signal;
-  await props.rpgAssistantService.updateCharacterAsync(
+  await props.loreWeaveApiService.updateCharacterAsync(
     new UpdateCharacter(
       characterData.value.id,
       characterData.value.name,
@@ -40,11 +46,12 @@ function onClickCancel() {
   open.value = false;
 }
 
+/** Fetch the character + its version into the form (aborting any prior load). */
 async function loadCharacterById(id: string) {
   controller?.abort();
   controller = new AbortController();
 
-  const dto = await props.rpgAssistantService.getCharacterAsync(id, controller.signal);
+  const dto = await props.loreWeaveApiService.getCharacterAsync(id, controller.signal);
   characterData.value.id = dto.id;
   characterData.value.name = dto.name;
   characterData.value.version = dto.version;

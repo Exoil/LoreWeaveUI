@@ -1,3 +1,7 @@
+/**
+ * Payload to edit a relation's `description` / `isStrongRelation`. `version` is
+ * the relation's ETag, sent for an optimistic-concurrency check on the backend.
+ */
 export class UpdateKnowRelation {
   public fromCharacterId: string;
   public toCharacterId: string;

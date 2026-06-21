@@ -1,6 +1,12 @@
 <script setup lang="ts">
+/**
+ * Right-click context menu for a graph node (character). Offers update, find-path,
+ * delete, and create-relation actions; each is disabled unless the required
+ * selection is present (the create-relation action needs two selected nodes).
+ * Opened imperatively by the parent via the exposed {@link showNodeContextMenu}.
+ */
 import * as vNG from 'v-network-graph';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import DeleteCharacterComponent from '@/components/DeleteCharacterComponent.vue';
 import ContextMenuRoot from '@/components/menus/ContextMenuRoot.vue';
 import { useContextMenu } from '@/composables/useContextMenu';
@@ -8,7 +14,7 @@ import { useContextMenu } from '@/composables/useContextMenu';
 const { menuEl, isOpen, pos, showContextMenu, hideMenu } = useContextMenu();
 
 const props = defineProps<{
-  rpgAssistantService: RpgAssistantService;
+  loreWeaveApiService: LoreWeaveApiService;
   firstSelectedCharacterId: string | null;
   secondSelectedCharacterId: string | null;
 }>();
@@ -43,6 +49,7 @@ function onCreateKnowEdgeClick() {
   hideMenu();
 }
 
+/** Open the menu at the node event (suppressing the browser's native menu). */
 function showNodeContextMenu(params: vNG.NodeEvent<MouseEvent>) {
   const { event } = params;
   event.stopPropagation();
@@ -88,7 +95,7 @@ defineExpose({
           <div class="dropdown-item dropdown-item--embedded">
             <DeleteCharacterComponent
               :disabled="!firstSelectedCharacterId"
-              :rpgAssistantService="rpgAssistantService"
+              :loreWeaveApiService="loreWeaveApiService"
               :characterId="firstSelectedCharacterId"
               @deletedCharacter="onCharacterDeleted"
             />

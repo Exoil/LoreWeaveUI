@@ -13,19 +13,19 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import DeleteCharacterComponent from '@/components/DeleteCharacterComponent.vue';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 
-function makeService(overrides: Partial<RpgAssistantService> = {}): RpgAssistantService {
+function makeService(overrides: Partial<LoreWeaveApiService> = {}): LoreWeaveApiService {
   return {
     deleteCharacterAsync: vi.fn().mockResolvedValue(undefined),
     ...overrides,
-  } as unknown as RpgAssistantService;
+  } as unknown as LoreWeaveApiService;
 }
 
 describe('DeleteCharacterComponent', () => {
   it('renders a Delete character button', () => {
     const wrapper = mount(DeleteCharacterComponent, {
-      props: { rpgAssistantService: makeService(), characterId: 'char-1' },
+      props: { loreWeaveApiService: makeService(), characterId: 'char-1' },
     });
 
     expect(wrapper.find('#delete-character-button').exists()).toBe(true);
@@ -33,7 +33,7 @@ describe('DeleteCharacterComponent', () => {
 
   it('button is disabled when characterId is null', () => {
     const wrapper = mount(DeleteCharacterComponent, {
-      props: { rpgAssistantService: makeService(), characterId: null },
+      props: { loreWeaveApiService: makeService(), characterId: null },
     });
 
     const button = wrapper.find<HTMLButtonElement>('#delete-character-button');
@@ -42,7 +42,7 @@ describe('DeleteCharacterComponent', () => {
 
   it('button is enabled when characterId is provided', () => {
     const wrapper = mount(DeleteCharacterComponent, {
-      props: { rpgAssistantService: makeService(), characterId: 'char-1' },
+      props: { loreWeaveApiService: makeService(), characterId: 'char-1' },
     });
 
     const button = wrapper.find<HTMLButtonElement>('#delete-character-button');
@@ -52,7 +52,7 @@ describe('DeleteCharacterComponent', () => {
   it('calls deleteCharacterAsync with the correct id on click', async () => {
     const service = makeService();
     const wrapper = mount(DeleteCharacterComponent, {
-      props: { rpgAssistantService: service, characterId: 'char-42' },
+      props: { loreWeaveApiService: service, characterId: 'char-42' },
     });
 
     await wrapper.find('#delete-character-button').trigger('click');
@@ -63,7 +63,7 @@ describe('DeleteCharacterComponent', () => {
 
   it('emits deletedCharacter with the id after successful deletion', async () => {
     const wrapper = mount(DeleteCharacterComponent, {
-      props: { rpgAssistantService: makeService(), characterId: 'char-42' },
+      props: { loreWeaveApiService: makeService(), characterId: 'char-42' },
     });
 
     await wrapper.find('#delete-character-button').trigger('click');
@@ -75,7 +75,7 @@ describe('DeleteCharacterComponent', () => {
   it('does not call the service when characterId is null', async () => {
     const service = makeService();
     const wrapper = mount(DeleteCharacterComponent, {
-      props: { rpgAssistantService: service, characterId: null },
+      props: { loreWeaveApiService: service, characterId: null },
     });
 
     await wrapper.find('#delete-character-button').trigger('click');

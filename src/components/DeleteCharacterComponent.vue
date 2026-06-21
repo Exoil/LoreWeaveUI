@@ -1,9 +1,14 @@
 <script setup lang="ts">
+/**
+ * Delete-character action button (embedded in the node context menu).
+ * Emits `deletedCharacter` with the id after the backend delete succeeds.
+ * Disabled when there is no `characterId`.
+ */
 import { onBeforeUnmount } from 'vue';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 
 const props = defineProps<{
-  rpgAssistantService: RpgAssistantService;
+  loreWeaveApiService: LoreWeaveApiService;
   characterId: string | null;
 }>();
 let controller: AbortController | null = null;
@@ -17,7 +22,7 @@ async function onClickDeleteCharacter() {
 
   controller = new AbortController();
   const signal = controller.signal;
-  await props.rpgAssistantService.deleteCharacterAsync(props.characterId, signal);
+  await props.loreWeaveApiService.deleteCharacterAsync(props.characterId, signal);
 
   emit('deletedCharacter', props.characterId);
 }

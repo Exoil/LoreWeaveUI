@@ -1,20 +1,20 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import DeleteKnowCharacterEdgeComponent from '@/components/DeleteKnowCharacterEdgeComponent.vue';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 
-function makeService(overrides: Partial<RpgAssistantService> = {}): RpgAssistantService {
+function makeService(overrides: Partial<LoreWeaveApiService> = {}): LoreWeaveApiService {
   return {
     deleteKnowRelationBetweenCharacters: vi.fn().mockResolvedValue(undefined),
     ...overrides,
-  } as unknown as RpgAssistantService;
+  } as unknown as LoreWeaveApiService;
 }
 
 describe('DeleteKnowCharacterEdgeComponent', () => {
   it('renders the Delete know edge button', () => {
     const wrapper = mount(DeleteKnowCharacterEdgeComponent, {
       props: {
-        rpgAssistantService: makeService(),
+        loreWeaveApiService: makeService(),
         edgeId: 'char-1_char-2',
         edgeIdSeparator: '_',
       },
@@ -27,7 +27,7 @@ describe('DeleteKnowCharacterEdgeComponent', () => {
     const service = makeService();
     const wrapper = mount(DeleteKnowCharacterEdgeComponent, {
       props: {
-        rpgAssistantService: service,
+        loreWeaveApiService: service,
         edgeId: 'char-1_char-2',
         edgeIdSeparator: '_',
       },
@@ -46,7 +46,7 @@ describe('DeleteKnowCharacterEdgeComponent', () => {
   it('emits deletedKnowEdge with the full edge id', async () => {
     const wrapper = mount(DeleteKnowCharacterEdgeComponent, {
       props: {
-        rpgAssistantService: makeService(),
+        loreWeaveApiService: makeService(),
         edgeId: 'char-1_char-2',
         edgeIdSeparator: '_',
       },
@@ -62,7 +62,7 @@ describe('DeleteKnowCharacterEdgeComponent', () => {
     const service = makeService();
     const wrapper = mount(DeleteKnowCharacterEdgeComponent, {
       props: {
-        rpgAssistantService: service,
+        loreWeaveApiService: service,
         edgeId: undefined,
         edgeIdSeparator: '_',
       },

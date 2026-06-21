@@ -6,5 +6,7 @@
 // Use this rather than runtime probes (e.g. checking for `Hooks`, `game`, or
 // a DOM mount node) — the runtime probes are fragile during tests and SSR,
 // and they cannot drive tree-shaking.
+/** True in the Foundry-module bundle, false in the standalone SPA bundle. */
 export const isFoundry: boolean = __IS_FOUNDRY__;
+/** Inverse of {@link isFoundry}; true in the standalone SPA bundle. */
 export const isStandalone: boolean = !__IS_FOUNDRY__;

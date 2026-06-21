@@ -1,11 +1,17 @@
 <script setup lang="ts">
+/**
+ * Modal to create a character node.
+ * - `v-model:open` controls visibility.
+ * - Emits `characterCreated` with the new {@link CharacterNode} after the backend
+ *   call succeeds, then clears the form and closes.
+ */
 import { onBeforeUnmount, ref } from 'vue';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { CharacterNode } from '@/models/CharacterNode';
 import { Character } from '@/services/Models/Character';
 
 const props = defineProps<{
-  rpgAssistantService: RpgAssistantService;
+  loreWeaveApiService: LoreWeaveApiService;
 }>();
 
 const open = defineModel<boolean>('open', { required: true });
@@ -17,12 +23,13 @@ const emit = defineEmits<{
 let controller: AbortController | null = null;
 const characterCreateName = ref('');
 
+/** Create the character on the backend, emit the new node, then reset + close. */
 async function onClickCreateCharacter() {
   controller?.abort();
   controller = new AbortController();
 
   const signal = controller.signal;
-  const createResult = await props.rpgAssistantService.createCharacterAsync(
+  const createResult = await props.loreWeaveApiService.createCharacterAsync(
     characterCreateName.value,
     signal,
   );

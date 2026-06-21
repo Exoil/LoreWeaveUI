@@ -20,7 +20,7 @@ export interface UseXxxOptions {
   /* options with sensible defaults */
 }
 
-export function useXxx(service: RpgAssistantService, options: UseXxxOptions = {}) {
+export function useXxx(service: LoreWeaveApiService, options: UseXxxOptions = {}) {
   const query = ref('');
   const items = ref<Foo[]>([]);
   const loading = ref(false);

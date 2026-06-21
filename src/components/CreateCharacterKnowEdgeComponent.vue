@@ -1,10 +1,15 @@
 <script setup lang="ts">
+/**
+ * Modal to create a "knows" relation from `fromNodeId` to `targetNodeId`.
+ * - `v-model:open` controls visibility; the form resets each time it opens.
+ * - Emits `createKnowEdge` with the new {@link KnowEdge} after the backend call.
+ */
 import { ref, watch, onBeforeUnmount } from 'vue';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { KnowEdge } from '@/models/KnowEdge';
 
 const props = defineProps<{
-  rpgAssistantService: RpgAssistantService;
+  loreWeaveApiService: LoreWeaveApiService;
   fromNodeId: string | null;
   targetNodeId: string | null;
 }>();
@@ -20,6 +25,7 @@ const description = ref('');
 const isStrongRelation = ref(true);
 let controller: AbortController | null = null;
 
+/** Create the relation on the backend, emit the new edge, then close. */
 async function onClickCreateKnowEdge() {
   if (!props.fromNodeId || !props.targetNodeId) return;
 
@@ -27,7 +33,7 @@ async function onClickCreateKnowEdge() {
   controller = new AbortController();
   const signal = controller.signal;
 
-  await props.rpgAssistantService.createKnowRelationBetweenCharacters(
+  await props.loreWeaveApiService.createKnowRelationBetweenCharacters(
     props.fromNodeId,
     props.targetNodeId,
     description.value,

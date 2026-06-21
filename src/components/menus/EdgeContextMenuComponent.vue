@@ -1,6 +1,11 @@
 <script setup lang="ts">
+/**
+ * Right-click context menu for a graph edge (relation). Offers update + delete
+ * for the `selectedEdgeId`. Opened imperatively by the parent via the exposed
+ * {@link showEdgeContextMenu}.
+ */
 import * as vNG from 'v-network-graph';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import DeleteKnowCharacterEdgeComponent from '@/components/DeleteKnowCharacterEdgeComponent.vue';
 import ContextMenuRoot from '@/components/menus/ContextMenuRoot.vue';
 import { useContextMenu } from '@/composables/useContextMenu';
@@ -8,7 +13,7 @@ import { useContextMenu } from '@/composables/useContextMenu';
 const { menuEl, isOpen, pos, showContextMenu, hideMenu } = useContextMenu();
 
 const props = defineProps<{
-  rpgAssistantService: RpgAssistantService;
+  loreWeaveApiService: LoreWeaveApiService;
   selectedEdgeId: string | undefined;
   edgeIdSeparator: string;
 }>();
@@ -29,6 +34,7 @@ function onEdgeKnowDeleted(deletedEdgeId: string) {
   hideMenu();
 }
 
+/** Open the menu at the edge event (suppressing the browser's native menu). */
 function showEdgeContextMenu(params: vNG.EdgeEvent<MouseEvent>) {
   const { event } = params;
   event.stopPropagation();
@@ -63,7 +69,7 @@ defineExpose({
           </button>
           <div class="dropdown-item">
             <DeleteKnowCharacterEdgeComponent
-              :rpgAssistantService="rpgAssistantService"
+              :loreWeaveApiService="loreWeaveApiService"
               :edgeId="selectedEdgeId"
               :edgeIdSeparator="edgeIdSeparator"
               @deletedKnowEdge="onEdgeKnowDeleted"

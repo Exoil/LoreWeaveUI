@@ -1,9 +1,14 @@
 <script setup lang="ts">
+/**
+ * Delete-relation action button (embedded in the edge context menu). The `edgeId`
+ * encodes both endpoints (`<fromId><sep><toId>`); it is split on `edgeIdSeparator`
+ * to address the relation. Emits `deletedKnowEdge` with the edge id on success.
+ */
 import { onBeforeUnmount } from 'vue';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 
 const props = defineProps<{
-  rpgAssistantService: RpgAssistantService;
+  loreWeaveApiService: LoreWeaveApiService;
   edgeId: string | undefined;
   edgeIdSeparator: string;
 }>();
@@ -19,7 +24,7 @@ async function onClickDeleteKnowEdge() {
   controller = new AbortController();
   const signal = controller.signal;
   const [fromId, toId] = props.edgeId.split(props.edgeIdSeparator);
-  await props.rpgAssistantService.deleteKnowRelationBetweenCharacters(fromId!, toId!, signal);
+  await props.loreWeaveApiService.deleteKnowRelationBetweenCharacters(fromId!, toId!, signal);
 
   emit('deletedKnowEdge', props.edgeId);
 }

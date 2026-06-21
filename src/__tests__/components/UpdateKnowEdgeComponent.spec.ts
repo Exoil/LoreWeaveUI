@@ -2,23 +2,23 @@ import { describe, it, expect, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import UpdateKnowEdgeComponent from '@/components/UpdateKnowEdgeComponent.vue';
 import { VersionedKnowRelation } from '@/services/Models/VersionedKnowRelation';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 
-function makeService(overrides: Partial<RpgAssistantService> = {}): RpgAssistantService {
+function makeService(overrides: Partial<LoreWeaveApiService> = {}): LoreWeaveApiService {
   return {
     getKnowRelationAsync: vi
       .fn()
       .mockResolvedValue(new VersionedKnowRelation('char-1', 'char-2', 'old friends', true, '2')),
     updateKnowRelationAsync: vi.fn().mockResolvedValue(undefined),
     ...overrides,
-  } as unknown as RpgAssistantService;
+  } as unknown as LoreWeaveApiService;
 }
 
-function mountComponent(service: RpgAssistantService) {
+function mountComponent(service: LoreWeaveApiService) {
   return mount(UpdateKnowEdgeComponent, {
     props: {
       open: false,
-      rpgAssistantService: service,
+      loreWeaveApiService: service,
       fromCharacterId: 'char-1',
       toCharacterId: 'char-2',
     },
@@ -49,7 +49,7 @@ describe('UpdateKnowEdgeComponent', () => {
     const wrapper = mount(UpdateKnowEdgeComponent, {
       props: {
         open: false,
-        rpgAssistantService: service,
+        loreWeaveApiService: service,
         fromCharacterId: null,
         toCharacterId: null,
       },

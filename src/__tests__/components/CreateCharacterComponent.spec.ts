@@ -1,19 +1,19 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import CreateCharacterComponent from '@/components/CreateCharacterComponent.vue';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 
-function makeService(overrides: Partial<RpgAssistantService> = {}): RpgAssistantService {
+function makeService(overrides: Partial<LoreWeaveApiService> = {}): LoreWeaveApiService {
   return {
     createCharacterAsync: vi.fn().mockResolvedValue('new-id'),
     ...overrides,
-  } as unknown as RpgAssistantService;
+  } as unknown as LoreWeaveApiService;
 }
 
 describe('CreateCharacterComponent', () => {
   it('modal is visible when open prop is true', () => {
     const wrapper = mount(CreateCharacterComponent, {
-      props: { rpgAssistantService: makeService(), open: true },
+      props: { loreWeaveApiService: makeService(), open: true },
     });
 
     expect(wrapper.find('.modal').classes()).toContain('is-active');
@@ -21,7 +21,7 @@ describe('CreateCharacterComponent', () => {
 
   it('modal is hidden when open prop is false', () => {
     const wrapper = mount(CreateCharacterComponent, {
-      props: { rpgAssistantService: makeService(), open: false },
+      props: { loreWeaveApiService: makeService(), open: false },
     });
 
     expect(wrapper.find('.modal').classes()).not.toContain('is-active');
@@ -30,7 +30,7 @@ describe('CreateCharacterComponent', () => {
   it('calls createCharacterAsync with the typed name', async () => {
     const service = makeService();
     const wrapper = mount(CreateCharacterComponent, {
-      props: { rpgAssistantService: service, open: true },
+      props: { loreWeaveApiService: service, open: true },
     });
 
     await wrapper.find('#create-character-node-name-input').setValue('Gandalf');
@@ -42,7 +42,7 @@ describe('CreateCharacterComponent', () => {
 
   it('emits characterCreated with a CharacterNode after create', async () => {
     const wrapper = mount(CreateCharacterComponent, {
-      props: { rpgAssistantService: makeService(), open: true },
+      props: { loreWeaveApiService: makeService(), open: true },
     });
 
     await wrapper.find('#create-character-node-name-input').setValue('Gandalf');
@@ -56,7 +56,7 @@ describe('CreateCharacterComponent', () => {
 
   it('emits update:open=false after create', async () => {
     const wrapper = mount(CreateCharacterComponent, {
-      props: { rpgAssistantService: makeService(), open: true },
+      props: { loreWeaveApiService: makeService(), open: true },
     });
 
     await wrapper.find('#create-character-node-name-input').setValue('Gandalf');
@@ -68,7 +68,7 @@ describe('CreateCharacterComponent', () => {
 
   it('clears the input after create', async () => {
     const wrapper = mount(CreateCharacterComponent, {
-      props: { rpgAssistantService: makeService(), open: true },
+      props: { loreWeaveApiService: makeService(), open: true },
     });
     const input = wrapper.find<HTMLInputElement>('#create-character-node-name-input');
 
@@ -82,7 +82,7 @@ describe('CreateCharacterComponent', () => {
   it('Cancel button emits update:open=false without calling the service', async () => {
     const service = makeService();
     const wrapper = mount(CreateCharacterComponent, {
-      props: { rpgAssistantService: service, open: true },
+      props: { loreWeaveApiService: service, open: true },
     });
 
     await wrapper.find('.button.is-ghost').trigger('click');

@@ -11,9 +11,13 @@ import { API_BASE_URL_KEY } from './injection-keys';
 
 const { ApplicationV2 } = foundry.applications.api;
 
-// ApplicationV2 window that owns one Vue app instance for its lifetime.
-// Vite library mode bundles Vue + v-network-graph + Bulma into the module
-// itself — Foundry does not provide any of these at runtime.
+/**
+ * Foundry `ApplicationV2` window that owns a single Vue app instance for its
+ * lifetime: it creates the app on render and unmounts it on close. Vite library
+ * mode bundles Vue + v-network-graph + Bulma into the module — Foundry provides
+ * none of these at runtime. The API base URL is injected into the Vue app so the
+ * host (not `App.vue`) decides where the backend lives.
+ */
 export class LoreWeaveApp extends ApplicationV2 {
   static override DEFAULT_OPTIONS = {
     // Distinct from the module id — using the module id verbatim collides
@@ -34,6 +38,7 @@ export class LoreWeaveApp extends ApplicationV2 {
 
   private vueApp: VueApp | null = null;
 
+  /** @param apiBaseUrl backend base URL captured at construction and provided to the Vue app. */
   constructor(
     private readonly apiBaseUrl: string,
     options?: Record<string, unknown>,
@@ -41,6 +46,7 @@ export class LoreWeaveApp extends ApplicationV2 {
     super(options);
   }
 
+  /** Build the host element Vue mounts into (carries the `.<id>-root` class for Bulma). */
   protected override async _renderHTML(): Promise<HTMLElement> {
     const host = document.createElement('div');
     host.classList.add(`${MODULE_ID}-root`);
@@ -49,10 +55,12 @@ export class LoreWeaveApp extends ApplicationV2 {
     return host;
   }
 
+  /** Swap our host element into the window's content area. */
   protected override _replaceHTML(result: HTMLElement | string, content: HTMLElement): void {
     content.replaceChildren(result as HTMLElement);
   }
 
+  /** Create + mount the Vue app on first render; subsequent renders are no-ops. */
   protected override async _onRender(): Promise<void> {
     if (this.vueApp) return;
 
@@ -65,6 +73,7 @@ export class LoreWeaveApp extends ApplicationV2 {
     this.vueApp.mount(host);
   }
 
+  /** Unmount the Vue app when the window closes so a reopen rebuilds cleanly. */
   protected override async _onClose(): Promise<void> {
     if (!this.vueApp) return;
     this.vueApp.unmount();

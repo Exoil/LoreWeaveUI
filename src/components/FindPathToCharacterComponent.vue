@@ -1,10 +1,17 @@
 <script setup lang="ts">
+/**
+ * Modal to find a relation path from `fromCharacterId` to a character the user
+ * picks from a debounced, infinite-scroll search list (the "from" character is
+ * excluded from results). Selecting a target asks the backend for the path and
+ * emits `pathFound` with the ordered character ids; if none exists it shows a
+ * message instead. Search is powered by {@link usePaginatedCharacterSearch}.
+ */
 import { onBeforeUnmount, ref, watch } from 'vue';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { usePaginatedCharacterSearch } from '@/composables/usePaginatedCharacterSearch';
 
 const props = defineProps<{
-  rpgAssistantService: RpgAssistantService;
+  loreWeaveApiService: LoreWeaveApiService;
   fromCharacterId: string | null;
 }>();
 
@@ -17,7 +24,7 @@ const emit = defineEmits<{
 const SCROLL_THRESHOLD_PX = 24;
 
 const { query, items, loading, hasMore, loadMore, reset, cancel } = usePaginatedCharacterSearch(
-  props.rpgAssistantService,
+  props.loreWeaveApiService,
   { pageSize: 10, debounceMs: 250, excludeId: () => props.fromCharacterId },
 );
 
@@ -25,6 +32,7 @@ const noPathFound = ref(false);
 const findingPath = ref(false);
 let findPathController: AbortController | null = null;
 
+/** Load the next page once the user scrolls near the bottom of the results. */
 function onListScroll(event: Event) {
   const el = event.currentTarget as HTMLElement;
   if (el.scrollTop + el.clientHeight >= el.scrollHeight - SCROLL_THRESHOLD_PX) {
@@ -32,6 +40,7 @@ function onListScroll(event: Event) {
   }
 }
 
+/** Request the path to the chosen character; emit it, or show "no path". */
 async function onSelectCharacter(toId: string) {
   if (!props.fromCharacterId) return;
   findPathController?.abort();
@@ -39,7 +48,7 @@ async function onSelectCharacter(toId: string) {
   findingPath.value = true;
   noPathFound.value = false;
   try {
-    const path = await props.rpgAssistantService.findRelationBetweenCharactersAsync(
+    const path = await props.loreWeaveApiService.findRelationBetweenCharactersAsync(
       props.fromCharacterId,
       toId,
       findPathController.signal,

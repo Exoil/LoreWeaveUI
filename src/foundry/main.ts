@@ -1,3 +1,9 @@
+/**
+ * Foundry module entry point: registers settings + the module API on `init`,
+ * adds the scene-control button that opens the LoreWeave window, and reacts to
+ * the GM changing the API base URL. The standalone SPA uses `src/main.ts`
+ * instead.
+ */
 import { LoreWeaveApp } from './LoreWeaveApp';
 import { MODULE_ID } from './constants';
 
@@ -7,11 +13,13 @@ export { MODULE_ID };
 // expensive to rebuild, so we keep one across open/close cycles.
 let appInstance: LoreWeaveApp | null = null;
 
+/** Read the configured backend base URL from world settings (''. if unset/invalid). */
 function getApiBaseUrl(): string {
   const value = game.settings.get(MODULE_ID, 'apiBaseUrl');
   return typeof value === 'string' ? value : '';
 }
 
+/** Lazily create (and reuse) the single {@link LoreWeaveApp} window instance. */
 function getApp(): LoreWeaveApp {
   // The base URL is captured once on first open. If the GM changes the
   // setting they must close and reopen the window; we don't hot-swap the
@@ -20,11 +28,15 @@ function getApp(): LoreWeaveApp {
   return appInstance;
 }
 
-// Errors thrown during ApplicationV2 construction or render() are swallowed
-// silently when the scene-control click handler is fire-and-forget, leaving
-// the user with no feedback and a button that "does nothing". Funnel both
-// paths through this wrapper so failures surface in the console *and* in
-// Foundry's notification toaster.
+/**
+ * Open (rendering) the LoreWeave window, surfacing any failure in both the
+ * console and Foundry's notification toaster.
+ *
+ * Errors thrown during ApplicationV2 construction or render() are swallowed
+ * silently when the scene-control click handler is fire-and-forget, leaving
+ * the user with no feedback and a button that "does nothing". Funnelling both
+ * the sync and async paths through here makes failures visible.
+ */
 function openWindow(): void {
   try {
     const app = getApp();

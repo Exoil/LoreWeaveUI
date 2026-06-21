@@ -1,11 +1,18 @@
 <script setup lang="ts">
+/**
+ * Modal to edit a relation's description/strength.
+ * - Loads the current relation (and its ETag `version`) each time it opens.
+ * - After saving it re-reads the relation so the UI reflects what was persisted
+ *   (including the new version) rather than the local form state.
+ * - Emits `updatedKnowEdge` with the refreshed {@link VersionedKnowRelation}.
+ */
 import { onBeforeUnmount, ref, watch } from 'vue';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { UpdateKnowRelation } from '@/services/Models/UpdateKnowRelation';
 import { VersionedKnowRelation } from '@/services/Models/VersionedKnowRelation';
 
 const props = defineProps<{
-  rpgAssistantService: RpgAssistantService;
+  loreWeaveApiService: LoreWeaveApiService;
   fromCharacterId: string | null;
   toCharacterId: string | null;
 }>();
@@ -21,17 +28,19 @@ const isStrongRelation = ref(true);
 const version = ref('');
 let controller: AbortController | null = null;
 
+/** Copy a fetched relation into the local form refs. */
 function applyRelation(relation: VersionedKnowRelation) {
   description.value = relation.description;
   isStrongRelation.value = relation.isStrongRelation;
   version.value = relation.version;
 }
 
+/** Fetch the current relation (+ version) into the form, aborting any prior load. */
 async function loadRelation(fromId: string, toId: string) {
   controller?.abort();
   controller = new AbortController();
 
-  const relation = await props.rpgAssistantService.getKnowRelationAsync(
+  const relation = await props.loreWeaveApiService.getKnowRelationAsync(
     fromId,
     toId,
     controller.signal,
@@ -46,7 +55,7 @@ async function onClickUpdateKnowEdge() {
   controller = new AbortController();
   const signal = controller.signal;
 
-  await props.rpgAssistantService.updateKnowRelationAsync(
+  await props.loreWeaveApiService.updateKnowRelationAsync(
     new UpdateKnowRelation(
       props.fromCharacterId,
       props.toCharacterId,
@@ -59,7 +68,7 @@ async function onClickUpdateKnowEdge() {
 
   // Re-read the relation so the UI reflects what was persisted, including the
   // new version, rather than trusting the local form state.
-  const refreshed = await props.rpgAssistantService.getKnowRelationAsync(
+  const refreshed = await props.loreWeaveApiService.getKnowRelationAsync(
     props.fromCharacterId,
     props.toCharacterId,
     signal,
