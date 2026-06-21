@@ -2,9 +2,7 @@
 import * as vNG from 'v-network-graph';
 import type { RpgAssistantService } from '@/services/RpgAssistantService';
 import DeleteCharacterComponent from '@/components/DeleteCharacterComponent.vue';
-import CreateCharacterKnowEdgeComponent from '@/components/CreateCharacterKnowEdgeComponent.vue';
 import { useContextMenu } from '@/composables/useContextMenu';
-import type { KnowEdge } from '@/models/KnowEdge';
 
 const { menuEl, isOpen, pos, showContextMenu, hideMenu } = useContextMenu();
 
@@ -17,8 +15,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   openUpdateCharacterDialog: [];
   openFindPathDialog: [];
+  openCreateKnowEdgeDialog: [];
   deletedCharacterFromMenu: [deletedCharacterId: string];
-  createKnowEdgeFromMenu: [edge: KnowEdge];
 }>();
 
 function onUpdateClick() {
@@ -38,8 +36,9 @@ function onCharacterDeleted(deletedCharacterId: string) {
   hideMenu();
 }
 
-function onEdgeKnowCreated(edge: KnowEdge) {
-  emit('createKnowEdgeFromMenu', edge);
+function onCreateKnowEdgeClick() {
+  if (!props.firstSelectedCharacterId || !props.secondSelectedCharacterId) return;
+  emit('openCreateKnowEdgeDialog');
   hideMenu();
 }
 
@@ -95,14 +94,15 @@ defineExpose({
               />
             </div>
 
-            <div class="dropdown-item dropdown-item--embedded">
-              <CreateCharacterKnowEdgeComponent
-                :rpgAssistantService="rpgAssistantService"
-                :fromNodeId="firstSelectedCharacterId"
-                :targetNodeId="secondSelectedCharacterId"
-                @createKnowEdge="onEdgeKnowCreated"
-              />
-            </div>
+            <button
+              id="node-context-create-know-edge-button"
+              class="dropdown-item"
+              type="button"
+              @click="onCreateKnowEdgeClick"
+              :disabled="!firstSelectedCharacterId || !secondSelectedCharacterId"
+            >
+              Create know edge
+            </button>
           </div>
         </div>
       </div>

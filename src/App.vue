@@ -13,6 +13,7 @@ import NodeContextMenuComponent from '@/components/menus/NodeContextMenuComponen
 import EdgeContextMenuComponent from '@/components/menus/EdgeContextMenuComponent.vue';
 import ViewContextMenuComponent from '@/components/menus/ViewContextMenuComponent.vue';
 import CreateCharacterComponent from '@/components/CreateCharacterComponent.vue';
+import CreateCharacterKnowEdgeComponent from '@/components/CreateCharacterKnowEdgeComponent.vue';
 import UpdateCharacterComponent from '@/components/UpdateCharacterComponent.vue';
 import UpdateKnowEdgeComponent from '@/components/UpdateKnowEdgeComponent.vue';
 import FindPathToCharacterComponent from '@/components/FindPathToCharacterComponent.vue';
@@ -179,6 +180,8 @@ const SECOND_SELECTED_STROKE_COLOR = '#14532d';
 const SELECTED_PAIR_EDGE_COLOR = '#22c55e';
 const SELECTED_STROKE_WIDTH = 4;
 const WEAK_EDGE_DASHARRAY = '6 4';
+const DEFAULT_EDGE_WIDTH = 3;
+const EMPHASIZED_EDGE_WIDTH = 6;
 
 function setupGraphConfig() {
   graphConfiguration.node.selectable = 2;
@@ -199,7 +202,7 @@ function setupGraphConfig() {
     return DEFAULT_EDGE_COLOR;
   };
   graphConfiguration.edge.normal.width = (edge) =>
-    edge.connectsSelected || edge.highlighted ? 3 : 1;
+    edge.connectsSelected || edge.highlighted ? EMPHASIZED_EDGE_WIDTH : DEFAULT_EDGE_WIDTH;
   // Weak relations render as a dashed line; strong relations stay solid.
   graphConfiguration.edge.normal.dasharray = (edge) =>
     edge.isStrong ? undefined : WEAK_EDGE_DASHARRAY;
@@ -272,6 +275,12 @@ function setupGraphConfig() {
 const createDialogOpen = ref(false);
 function openCreateDialog() {
   createDialogOpen.value = true;
+}
+
+const createKnowEdgeModalOpen = ref(false);
+function openCreateKnowEdgeDialog() {
+  if (!firstSelectedNodeId.value || !secondSelectedNodeId.value) return;
+  createKnowEdgeModalOpen.value = true;
 }
 
 const updateNodeCharacterNodeModal = ref(false);
@@ -448,8 +457,8 @@ const eventHandlers: vNG.EventHandlers = {
       :secondSelectedCharacterId="secondSelectedNodeId"
       @openUpdateCharacterDialog="openUpdateDialog"
       @openFindPathDialog="openFindPathDialog"
+      @openCreateKnowEdgeDialog="openCreateKnowEdgeDialog"
       @deletedCharacterFromMenu="onCharacterDeleted"
-      @createKnowEdgeFromMenu="onEdgeKnowCreated"
     />
     <EdgeContextMenuComponent
       ref="edgeMenuRef"
@@ -472,6 +481,14 @@ const eventHandlers: vNG.EventHandlers = {
       :rpgAssistantService="rpgAssistantService"
       :characterId="firstSelectedNodeId"
       @updatedCharacter="onCharacterUpdated"
+    />
+
+    <CreateCharacterKnowEdgeComponent
+      v-model:open="createKnowEdgeModalOpen"
+      :rpgAssistantService="rpgAssistantService"
+      :fromNodeId="firstSelectedNodeId"
+      :targetNodeId="secondSelectedNodeId"
+      @createKnowEdge="onEdgeKnowCreated"
     />
 
     <UpdateKnowEdgeComponent

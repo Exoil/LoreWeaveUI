@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { mount, flushPromises, config } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import NodeContextMenuComponent from '@/components/menus/NodeContextMenuComponent.vue';
-import { KnowEdge } from '@/models/KnowEdge';
 import type { RpgAssistantService } from '@/services/RpgAssistantService';
 import type { NodeEvent } from 'v-network-graph';
 
@@ -102,20 +101,27 @@ describe('NodeContextMenuComponent', () => {
     expect(wrapper.emitted('deletedCharacterFromMenu')).toEqual([['char-1']]);
   });
 
-  it('creating a know edge emits createKnowEdgeFromMenu', async () => {
+  it('choosing create know edge emits openCreateKnowEdgeDialog and closes the menu', async () => {
     const wrapper = mount(NodeContextMenuComponent, {
       props: defaultProps({ secondSelectedCharacterId: 'char-2' }),
     });
     (wrapper.vm as unknown as ExposedNodeMenu).showNodeContextMenu(makeNodeEvent());
     await nextTick();
 
-    await wrapper.find('#create-know-edge-button').trigger('click');
-    await flushPromises();
+    await wrapper.find('#node-context-create-know-edge-button').trigger('click');
 
-    const emitted = wrapper.emitted('createKnowEdgeFromMenu');
-    expect(emitted).toHaveLength(1);
-    const edge = emitted![0]![0] as KnowEdge;
-    expect(edge.source).toBe('char-1');
-    expect(edge.target).toBe('char-2');
+    expect(wrapper.emitted('openCreateKnowEdgeDialog')).toHaveLength(1);
+    expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
+  });
+
+  it('create know edge is disabled without a second selected character', async () => {
+    const wrapper = mount(NodeContextMenuComponent, {
+      props: defaultProps({ secondSelectedCharacterId: null }),
+    });
+    (wrapper.vm as unknown as ExposedNodeMenu).showNodeContextMenu(makeNodeEvent());
+    await nextTick();
+
+    const button = wrapper.find<HTMLButtonElement>('#node-context-create-know-edge-button');
+    expect(button.element.disabled).toBe(true);
   });
 });

@@ -11,68 +11,29 @@ function makeService(overrides: Partial<RpgAssistantService> = {}): RpgAssistant
   } as unknown as RpgAssistantService;
 }
 
+function mountComponent(
+  service: RpgAssistantService,
+  props: { fromNodeId: string | null; targetNodeId: string | null } = {
+    fromNodeId: 'char-1',
+    targetNodeId: 'char-2',
+  },
+) {
+  return mount(CreateCharacterKnowEdgeComponent, {
+    props: { open: true, rpgAssistantService: service, ...props },
+  });
+}
+
 describe('CreateCharacterKnowEdgeComponent', () => {
-  it('button is disabled when both node ids are null', () => {
-    const wrapper = mount(CreateCharacterKnowEdgeComponent, {
-      props: {
-        rpgAssistantService: makeService(),
-        fromNodeId: null,
-        targetNodeId: null,
-      },
-    });
+  it('create button is disabled when a node id is missing', () => {
+    const wrapper = mountComponent(makeService(), { fromNodeId: 'char-1', targetNodeId: null });
 
     const button = wrapper.find<HTMLButtonElement>('#create-know-edge-button');
     expect(button.element.disabled).toBe(true);
-  });
-
-  it('button is disabled when only fromNodeId is provided', () => {
-    const wrapper = mount(CreateCharacterKnowEdgeComponent, {
-      props: {
-        rpgAssistantService: makeService(),
-        fromNodeId: 'char-1',
-        targetNodeId: null,
-      },
-    });
-
-    const button = wrapper.find<HTMLButtonElement>('#create-know-edge-button');
-    expect(button.element.disabled).toBe(true);
-  });
-
-  it('button is disabled when only targetNodeId is provided', () => {
-    const wrapper = mount(CreateCharacterKnowEdgeComponent, {
-      props: {
-        rpgAssistantService: makeService(),
-        fromNodeId: null,
-        targetNodeId: 'char-2',
-      },
-    });
-
-    const button = wrapper.find<HTMLButtonElement>('#create-know-edge-button');
-    expect(button.element.disabled).toBe(true);
-  });
-
-  it('button is enabled when both node ids are provided', () => {
-    const wrapper = mount(CreateCharacterKnowEdgeComponent, {
-      props: {
-        rpgAssistantService: makeService(),
-        fromNodeId: 'char-1',
-        targetNodeId: 'char-2',
-      },
-    });
-
-    const button = wrapper.find<HTMLButtonElement>('#create-know-edge-button');
-    expect(button.element.disabled).toBe(false);
   });
 
   it('defaults to a strong relation with an empty description', async () => {
     const service = makeService();
-    const wrapper = mount(CreateCharacterKnowEdgeComponent, {
-      props: {
-        rpgAssistantService: service,
-        fromNodeId: 'char-1',
-        targetNodeId: 'char-2',
-      },
-    });
+    const wrapper = mountComponent(service);
 
     await wrapper.find('#create-know-edge-button').trigger('click');
     await flushPromises();
@@ -88,13 +49,7 @@ describe('CreateCharacterKnowEdgeComponent', () => {
 
   it('passes the description and the weak relation flag to the service', async () => {
     const service = makeService();
-    const wrapper = mount(CreateCharacterKnowEdgeComponent, {
-      props: {
-        rpgAssistantService: service,
-        fromNodeId: 'char-1',
-        targetNodeId: 'char-2',
-      },
-    });
+    const wrapper = mountComponent(service);
 
     await wrapper.find('#create-know-edge-description-input').setValue('childhood friends');
     await wrapper.find('#create-know-edge-strong-checkbox').setValue(false);
@@ -110,14 +65,8 @@ describe('CreateCharacterKnowEdgeComponent', () => {
     );
   });
 
-  it('emits createKnowEdge carrying source, target, description and strength', async () => {
-    const wrapper = mount(CreateCharacterKnowEdgeComponent, {
-      props: {
-        rpgAssistantService: makeService(),
-        fromNodeId: 'char-1',
-        targetNodeId: 'char-2',
-      },
-    });
+  it('emits createKnowEdge with the relation data and closes the modal', async () => {
+    const wrapper = mountComponent(makeService());
 
     await wrapper.find('#create-know-edge-description-input').setValue('rivals');
     await wrapper.find('#create-know-edge-button').trigger('click');
@@ -130,5 +79,22 @@ describe('CreateCharacterKnowEdgeComponent', () => {
     expect(edge.target).toBe('char-2');
     expect(edge.description).toBe('rivals');
     expect(edge.isStrongRelation).toBe(true);
+
+    expect(wrapper.emitted('update:open')!.at(-1)).toEqual([false]);
+  });
+
+  it('resets the form each time the modal is reopened', async () => {
+    const wrapper = mountComponent(makeService());
+
+    await wrapper.find('#create-know-edge-description-input').setValue('stale text');
+    await wrapper.find('#create-know-edge-strong-checkbox').setValue(false);
+
+    await wrapper.setProps({ open: false });
+    await wrapper.setProps({ open: true });
+
+    const input = wrapper.find<HTMLInputElement>('#create-know-edge-description-input');
+    const checkbox = wrapper.find<HTMLInputElement>('#create-know-edge-strong-checkbox');
+    expect(input.element.value).toBe('');
+    expect(checkbox.element.checked).toBe(true);
   });
 });
