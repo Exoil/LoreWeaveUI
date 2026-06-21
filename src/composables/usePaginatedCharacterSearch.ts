@@ -1,6 +1,6 @@
 import { computed, ref, watch } from 'vue';
 import type { Character } from '@/services/Models/Character';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 
 export interface UsePaginatedCharacterSearchOptions {
   pageSize?: number;
@@ -9,7 +9,7 @@ export interface UsePaginatedCharacterSearchOptions {
 }
 
 export function usePaginatedCharacterSearch(
-  service: RpgAssistantService,
+  service: LoreWeaveApiService,
   options: UsePaginatedCharacterSearchOptions = {},
 ) {
   const pageSize = options.pageSize ?? 10;

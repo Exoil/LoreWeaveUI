@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from 'vue';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { usePaginatedCharacterSearch } from '@/composables/usePaginatedCharacterSearch';
 
 const props = defineProps<{
-  rpgAssistantService: RpgAssistantService;
+  loreWeaveApiService: LoreWeaveApiService;
   fromCharacterId: string | null;
 }>();
 
@@ -17,7 +17,7 @@ const emit = defineEmits<{
 const SCROLL_THRESHOLD_PX = 24;
 
 const { query, items, loading, hasMore, loadMore, reset, cancel } = usePaginatedCharacterSearch(
-  props.rpgAssistantService,
+  props.loreWeaveApiService,
   { pageSize: 10, debounceMs: 250, excludeId: () => props.fromCharacterId },
 );
 
@@ -39,7 +39,7 @@ async function onSelectCharacter(toId: string) {
   findingPath.value = true;
   noPathFound.value = false;
   try {
-    const path = await props.rpgAssistantService.findRelationBetweenCharactersAsync(
+    const path = await props.loreWeaveApiService.findRelationBetweenCharactersAsync(
       props.fromCharacterId,
       toId,
       findPathController.signal,

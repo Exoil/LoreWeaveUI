@@ -15,7 +15,7 @@ paths:
   await flushPromises();
   ```
 - Mock the service with `vi.fn().mockResolvedValue(...)` via a small
-  `makeService(overrides)` factory cast as `RpgAssistantService`.
+  `makeService(overrides)` factory cast as `LoreWeaveApiService`.
 - Target DOM with the same `id` attributes used in the component.
 - Assert emitted events with `wrapper.emitted('eventName')`.
 - Cover the happy path **and** at least one not-happy path (cancel, abort,

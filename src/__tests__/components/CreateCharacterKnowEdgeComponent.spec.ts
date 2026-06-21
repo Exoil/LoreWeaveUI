@@ -2,24 +2,24 @@ import { describe, it, expect, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import CreateCharacterKnowEdgeComponent from '@/components/CreateCharacterKnowEdgeComponent.vue';
 import { KnowEdge } from '@/models/KnowEdge';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 
-function makeService(overrides: Partial<RpgAssistantService> = {}): RpgAssistantService {
+function makeService(overrides: Partial<LoreWeaveApiService> = {}): LoreWeaveApiService {
   return {
     createKnowRelationBetweenCharacters: vi.fn().mockResolvedValue('rel-id'),
     ...overrides,
-  } as unknown as RpgAssistantService;
+  } as unknown as LoreWeaveApiService;
 }
 
 function mountComponent(
-  service: RpgAssistantService,
+  service: LoreWeaveApiService,
   props: { fromNodeId: string | null; targetNodeId: string | null } = {
     fromNodeId: 'char-1',
     targetNodeId: 'char-2',
   },
 ) {
   return mount(CreateCharacterKnowEdgeComponent, {
-    props: { open: true, rpgAssistantService: service, ...props },
+    props: { open: true, loreWeaveApiService: service, ...props },
   });
 }
 

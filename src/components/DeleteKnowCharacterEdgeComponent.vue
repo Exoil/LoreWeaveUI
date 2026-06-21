@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { onBeforeUnmount } from 'vue';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 
 const props = defineProps<{
-  rpgAssistantService: RpgAssistantService;
+  loreWeaveApiService: LoreWeaveApiService;
   edgeId: string | undefined;
   edgeIdSeparator: string;
 }>();
@@ -19,7 +19,7 @@ async function onClickDeleteKnowEdge() {
   controller = new AbortController();
   const signal = controller.signal;
   const [fromId, toId] = props.edgeId.split(props.edgeIdSeparator);
-  await props.rpgAssistantService.deleteKnowRelationBetweenCharacters(fromId!, toId!, signal);
+  await props.loreWeaveApiService.deleteKnowRelationBetweenCharacters(fromId!, toId!, signal);
 
   emit('deletedKnowEdge', props.edgeId);
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import FindPathToCharacterComponent from '@/components/FindPathToCharacterComponent.vue';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { Character } from '@/services/Models/Character';
 import { RelationPath } from '@/services/Models/RelationPath';
 
@@ -12,14 +12,14 @@ function makeCharacters(start: number, count: number): Character[] {
   );
 }
 
-function makeService(overrides: Partial<RpgAssistantService> = {}): RpgAssistantService {
+function makeService(overrides: Partial<LoreWeaveApiService> = {}): LoreWeaveApiService {
   return {
     searchCharactersByNameAsync: vi.fn().mockResolvedValue(makeCharacters(1, 10)),
     findRelationBetweenCharactersAsync: vi
       .fn()
       .mockResolvedValue(new RelationPath(['id-0', 'id-1'], 1)),
     ...overrides,
-  } as unknown as RpgAssistantService;
+  } as unknown as LoreWeaveApiService;
 }
 
 function setScrollMetrics(
@@ -51,7 +51,7 @@ describe('FindPathToCharacterComponent', () => {
 
   it('modal is visible when open prop is true', () => {
     const wrapper = mount(FindPathToCharacterComponent, {
-      props: { rpgAssistantService: makeService(), fromCharacterId: 'id-0', open: true },
+      props: { loreWeaveApiService: makeService(), fromCharacterId: 'id-0', open: true },
     });
 
     expect(wrapper.find('.modal').classes()).toContain('is-active');
@@ -59,7 +59,7 @@ describe('FindPathToCharacterComponent', () => {
 
   it('modal is hidden when open prop is false', () => {
     const wrapper = mount(FindPathToCharacterComponent, {
-      props: { rpgAssistantService: makeService(), fromCharacterId: 'id-0', open: false },
+      props: { loreWeaveApiService: makeService(), fromCharacterId: 'id-0', open: false },
     });
 
     expect(wrapper.find('.modal').classes()).not.toContain('is-active');
@@ -68,7 +68,7 @@ describe('FindPathToCharacterComponent', () => {
   it('debounces input then calls searchCharactersByNameAsync with nameFilter, page 1, size 10', async () => {
     const service = makeService();
     const wrapper = mount(FindPathToCharacterComponent, {
-      props: { rpgAssistantService: service, fromCharacterId: 'id-0', open: true },
+      props: { loreWeaveApiService: service, fromCharacterId: 'id-0', open: true },
     });
 
     await wrapper.find('#find-path-name-input').setValue('Fro');
@@ -93,7 +93,7 @@ describe('FindPathToCharacterComponent', () => {
         .mockResolvedValue([new Character('id-0', 'Self'), new Character('id-1', 'Other')]),
     });
     const wrapper = mount(FindPathToCharacterComponent, {
-      props: { rpgAssistantService: service, fromCharacterId: 'id-0', open: true },
+      props: { loreWeaveApiService: service, fromCharacterId: 'id-0', open: true },
     });
 
     await wrapper.find('#find-path-name-input').setValue('any');
@@ -107,7 +107,7 @@ describe('FindPathToCharacterComponent', () => {
   it('clicking a result calls findRelationBetweenCharactersAsync from -> picked', async () => {
     const service = makeService();
     const wrapper = mount(FindPathToCharacterComponent, {
-      props: { rpgAssistantService: service, fromCharacterId: 'id-0', open: true },
+      props: { loreWeaveApiService: service, fromCharacterId: 'id-0', open: true },
     });
 
     await wrapper.find('#find-path-name-input').setValue('Fro');
@@ -131,7 +131,7 @@ describe('FindPathToCharacterComponent', () => {
         .mockResolvedValue(new RelationPath(['id-0', 'id-5', 'id-1'], 2)),
     });
     const wrapper = mount(FindPathToCharacterComponent, {
-      props: { rpgAssistantService: service, fromCharacterId: 'id-0', open: true },
+      props: { loreWeaveApiService: service, fromCharacterId: 'id-0', open: true },
     });
 
     await wrapper.find('#find-path-name-input').setValue('Fro');
@@ -150,7 +150,7 @@ describe('FindPathToCharacterComponent', () => {
       findRelationBetweenCharactersAsync: vi.fn().mockResolvedValue(new RelationPath([], 0)),
     });
     const wrapper = mount(FindPathToCharacterComponent, {
-      props: { rpgAssistantService: service, fromCharacterId: 'id-0', open: true },
+      props: { loreWeaveApiService: service, fromCharacterId: 'id-0', open: true },
     });
 
     await wrapper.find('#find-path-name-input').setValue('Fro');
@@ -173,7 +173,7 @@ describe('FindPathToCharacterComponent', () => {
         .mockResolvedValueOnce(makeCharacters(11, 3)),
     });
     const wrapper = mount(FindPathToCharacterComponent, {
-      props: { rpgAssistantService: service, fromCharacterId: 'id-0', open: true },
+      props: { loreWeaveApiService: service, fromCharacterId: 'id-0', open: true },
     });
 
     await wrapper.find('#find-path-name-input').setValue('Fro');
@@ -199,7 +199,7 @@ describe('FindPathToCharacterComponent', () => {
       searchCharactersByNameAsync: vi.fn().mockResolvedValue(makeCharacters(1, 3)),
     });
     const wrapper = mount(FindPathToCharacterComponent, {
-      props: { rpgAssistantService: service, fromCharacterId: 'id-0', open: true },
+      props: { loreWeaveApiService: service, fromCharacterId: 'id-0', open: true },
     });
 
     await wrapper.find('#find-path-name-input').setValue('Fro');
@@ -217,7 +217,7 @@ describe('FindPathToCharacterComponent', () => {
   it('cancel button closes dialog without calling the service', async () => {
     const service = makeService();
     const wrapper = mount(FindPathToCharacterComponent, {
-      props: { rpgAssistantService: service, fromCharacterId: 'id-0', open: true },
+      props: { loreWeaveApiService: service, fromCharacterId: 'id-0', open: true },
     });
 
     await wrapper.find('#find-path-cancel-button').trigger('click');

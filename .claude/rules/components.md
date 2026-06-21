@@ -9,11 +9,11 @@ paths:
 - `<script setup lang="ts">` only. Composition API.
 - Declare contracts explicitly:
   ```ts
-  const props = defineProps<{ rpgAssistantService: RpgAssistantService }>();
+  const props = defineProps<{ loreWeaveApiService: LoreWeaveApiService }>();
   const open = defineModel<boolean>('open', { required: true });
   const emit = defineEmits<{ characterCreated: [node: CharacterNode] }>();
   ```
-- Inject the service via props (`rpgAssistantService`) — do not import a
+- Inject the service via props (`loreWeaveApiService`) — do not import a
   singleton inside the component.
 - Async work uses an `AbortController` declared in the setup scope:
   ```ts
@@ -21,7 +21,7 @@ paths:
   async function onClick() {
     controller?.abort();
     controller = new AbortController();
-    await props.rpgAssistantService.fooAsync(..., controller.signal);
+    await props.loreWeaveApiService.fooAsync(..., controller.signal);
   }
   onBeforeUnmount(() => controller?.abort());
   ```

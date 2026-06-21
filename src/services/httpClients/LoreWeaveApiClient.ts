@@ -10,7 +10,7 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, CancelToken } from 'axios';
 
-export interface IRpgAssistantClient {
+export interface ILoreWeaveApiClient {
   /**
    * Get paged characters
    * @param pageNumber Page number (0-based or 1-based depending on server configuration)
@@ -114,7 +114,7 @@ export interface IRpgAssistantClient {
   ): Promise<SwaggerResponse<void>>;
 }
 
-export class RpgAssistantClient implements IRpgAssistantClient {
+export class LoreWeaveApiClient implements ILoreWeaveApiClient {
   protected instance: AxiosInstance;
   protected baseUrl: string;
   protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;

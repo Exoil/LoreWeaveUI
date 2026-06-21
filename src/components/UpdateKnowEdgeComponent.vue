@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from 'vue';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { UpdateKnowRelation } from '@/services/Models/UpdateKnowRelation';
 import { VersionedKnowRelation } from '@/services/Models/VersionedKnowRelation';
 
 const props = defineProps<{
-  rpgAssistantService: RpgAssistantService;
+  loreWeaveApiService: LoreWeaveApiService;
   fromCharacterId: string | null;
   toCharacterId: string | null;
 }>();
@@ -31,7 +31,7 @@ async function loadRelation(fromId: string, toId: string) {
   controller?.abort();
   controller = new AbortController();
 
-  const relation = await props.rpgAssistantService.getKnowRelationAsync(
+  const relation = await props.loreWeaveApiService.getKnowRelationAsync(
     fromId,
     toId,
     controller.signal,
@@ -46,7 +46,7 @@ async function onClickUpdateKnowEdge() {
   controller = new AbortController();
   const signal = controller.signal;
 
-  await props.rpgAssistantService.updateKnowRelationAsync(
+  await props.loreWeaveApiService.updateKnowRelationAsync(
     new UpdateKnowRelation(
       props.fromCharacterId,
       props.toCharacterId,
@@ -59,7 +59,7 @@ async function onClickUpdateKnowEdge() {
 
   // Re-read the relation so the UI reflects what was persisted, including the
   // new version, rather than trusting the local form state.
-  const refreshed = await props.rpgAssistantService.getKnowRelationAsync(
+  const refreshed = await props.loreWeaveApiService.getKnowRelationAsync(
     props.fromCharacterId,
     props.toCharacterId,
     signal,

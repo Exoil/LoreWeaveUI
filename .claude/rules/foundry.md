@@ -7,7 +7,7 @@ paths:
 
 # Foundry VTT module rules
 
-These rules apply when editing the RpgAssistant frontend in its role as a
+These rules apply when editing the LoreWeave UI frontend in its role as a
 **Foundry VTT v14 module**. Foundry is the runtime host; the SPA boots inside
 a Foundry world via the manifest at `frontend/module.json`. The conversion
 itself was scaffolded by the `/foundry-module` skill — these rules govern the

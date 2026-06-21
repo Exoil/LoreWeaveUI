@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, watch, onBeforeUnmount } from 'vue';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { KnowEdge } from '@/models/KnowEdge';
 
 const props = defineProps<{
-  rpgAssistantService: RpgAssistantService;
+  loreWeaveApiService: LoreWeaveApiService;
   fromNodeId: string | null;
   targetNodeId: string | null;
 }>();
@@ -27,7 +27,7 @@ async function onClickCreateKnowEdge() {
   controller = new AbortController();
   const signal = controller.signal;
 
-  await props.rpgAssistantService.createKnowRelationBetweenCharacters(
+  await props.loreWeaveApiService.createKnowRelationBetweenCharacters(
     props.fromNodeId,
     props.targetNodeId,
     description.value,

@@ -2,10 +2,10 @@ import {
   type CharacterPayloadWithRelations,
   CreateCharacterDto,
   CreateKnowsDto,
-  RpgAssistantClient,
+  LoreWeaveApiClient,
   UpdateCharacterDto,
   UpdateKnowsDto,
-} from './httpClients/RpgAssistantClient';
+} from './httpClients/LoreWeaveApiClient';
 import { VersionedCharacter } from './Models/VersionedCharacter';
 import type { PageQuery } from './Models/PageQuery';
 import type { UpdateCharacter } from './Models/UpdateCharacter';
@@ -15,11 +15,11 @@ import { VersionedKnowRelation } from '@/services/Models/VersionedKnowRelation.t
 import type { UpdateKnowRelation } from '@/services/Models/UpdateKnowRelation.ts';
 import { RelationPath } from '@/services/Models/RelationPath.ts';
 
-export class RpgAssistantService {
-  private _rpgAssistantClient: RpgAssistantClient;
+export class LoreWeaveApiService {
+  private _loreWeaveApiClient: LoreWeaveApiClient;
 
   constructor(baseUrl: string) {
-    this._rpgAssistantClient = new RpgAssistantClient(baseUrl);
+    this._loreWeaveApiClient = new LoreWeaveApiClient(baseUrl);
   }
 
   private static toCharacter(payload: CharacterPayloadWithRelations): Character {
@@ -35,13 +35,13 @@ export class RpgAssistantService {
       name: name,
     });
 
-    const resposne = await this._rpgAssistantClient.createCharacter(createCharacter, signal);
+    const resposne = await this._loreWeaveApiClient.createCharacter(createCharacter, signal);
 
     return resposne.result;
   }
 
   public async getCharacterAsync(id: string, signal?: AbortSignal): Promise<VersionedCharacter> {
-    const response = await this._rpgAssistantClient.getCharacterById(id, signal);
+    const response = await this._loreWeaveApiClient.getCharacterById(id, signal);
     return new VersionedCharacter(
       response.result.id,
       response.result.name,
@@ -54,7 +54,7 @@ export class RpgAssistantService {
       name: updateCharacter.name,
     });
 
-    await this._rpgAssistantClient.updateCharacter(
+    await this._loreWeaveApiClient.updateCharacter(
       updateCharacter.id,
       updateCharacter.version,
       modelToUpdate,
@@ -63,14 +63,14 @@ export class RpgAssistantService {
   }
 
   public async deleteCharacterAsync(id: string, signal?: AbortSignal) {
-    await this._rpgAssistantClient.deleteCharacter(id, signal);
+    await this._loreWeaveApiClient.deleteCharacter(id, signal);
   }
 
   public async getCharactersAsync(
     pageQuery: PageQuery,
     signal?: AbortSignal,
   ): Promise<Character[]> {
-    const arrayOfCharacters = await this._rpgAssistantClient.getPagedCharacters(
+    const arrayOfCharacters = await this._loreWeaveApiClient.getPagedCharacters(
       pageQuery.pageNumber,
       pageQuery.pageSize,
       pageQuery.sortType,
@@ -79,7 +79,7 @@ export class RpgAssistantService {
       signal,
     );
 
-    return arrayOfCharacters.result.map((c) => RpgAssistantService.toCharacter(c));
+    return arrayOfCharacters.result.map((c) => LoreWeaveApiService.toCharacter(c));
   }
 
   public async createKnowRelationBetweenCharacters(
@@ -96,7 +96,7 @@ export class RpgAssistantService {
       isStrongRelation: isStrongRelation,
     });
 
-    return (await this._rpgAssistantClient.createKnowRelationship(createKnowRelation, signal))
+    return (await this._loreWeaveApiClient.createKnowRelationship(createKnowRelation, signal))
       .result;
   }
 
@@ -105,7 +105,7 @@ export class RpgAssistantService {
     toId: string,
     signal?: AbortSignal,
   ): Promise<VersionedKnowRelation> {
-    const response = await this._rpgAssistantClient.getKnowRelationship(fromId, toId, signal);
+    const response = await this._loreWeaveApiClient.getKnowRelationship(fromId, toId, signal);
     const relation = response.result;
 
     // The relation's version is carried by the ETag response header, not the
@@ -128,7 +128,7 @@ export class RpgAssistantService {
       isStrongRelation: update.isStrongRelation,
     });
 
-    await this._rpgAssistantClient.updateKnowRelationship(
+    await this._loreWeaveApiClient.updateKnowRelationship(
       update.fromCharacterId,
       update.toCharacterId,
       update.version,
@@ -142,7 +142,7 @@ export class RpgAssistantService {
     toId: string,
     signal?: AbortSignal,
   ): Promise<void> {
-    return (await this._rpgAssistantClient.deleteKnowRelationship(fromId, toId, signal)).result;
+    return (await this._loreWeaveApiClient.deleteKnowRelationship(fromId, toId, signal)).result;
   }
 
   public async searchCharactersByNameAsync(
@@ -151,7 +151,7 @@ export class RpgAssistantService {
     pageSize: number,
     signal?: AbortSignal,
   ): Promise<Character[]> {
-    const response = await this._rpgAssistantClient.getPagedCharacters(
+    const response = await this._loreWeaveApiClient.getPagedCharacters(
       pageNumber,
       pageSize,
       'name',
@@ -160,7 +160,7 @@ export class RpgAssistantService {
       signal,
     );
 
-    return response.result.map((c) => RpgAssistantService.toCharacter(c));
+    return response.result.map((c) => LoreWeaveApiService.toCharacter(c));
   }
 
   public async findRelationBetweenCharactersAsync(
@@ -168,7 +168,7 @@ export class RpgAssistantService {
     toId: string,
     signal?: AbortSignal,
   ): Promise<RelationPath> {
-    const response = await this._rpgAssistantClient.findRelationBetweenCharacters(
+    const response = await this._loreWeaveApiClient.findRelationBetweenCharacters(
       fromId,
       toId,
       undefined,

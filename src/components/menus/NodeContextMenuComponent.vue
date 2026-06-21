@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as vNG from 'v-network-graph';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import DeleteCharacterComponent from '@/components/DeleteCharacterComponent.vue';
 import ContextMenuRoot from '@/components/menus/ContextMenuRoot.vue';
 import { useContextMenu } from '@/composables/useContextMenu';
@@ -8,7 +8,7 @@ import { useContextMenu } from '@/composables/useContextMenu';
 const { menuEl, isOpen, pos, showContextMenu, hideMenu } = useContextMenu();
 
 const props = defineProps<{
-  rpgAssistantService: RpgAssistantService;
+  loreWeaveApiService: LoreWeaveApiService;
   firstSelectedCharacterId: string | null;
   secondSelectedCharacterId: string | null;
 }>();
@@ -88,7 +88,7 @@ defineExpose({
           <div class="dropdown-item dropdown-item--embedded">
             <DeleteCharacterComponent
               :disabled="!firstSelectedCharacterId"
-              :rpgAssistantService="rpgAssistantService"
+              :loreWeaveApiService="loreWeaveApiService"
               :characterId="firstSelectedCharacterId"
               @deletedCharacter="onCharacterDeleted"
             />

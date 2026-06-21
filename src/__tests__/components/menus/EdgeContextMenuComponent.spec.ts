@@ -2,18 +2,18 @@ import { describe, it, expect, vi } from 'vitest';
 import { mount, flushPromises, config } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import EdgeContextMenuComponent from '@/components/menus/EdgeContextMenuComponent.vue';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import type { EdgeEvent } from 'v-network-graph';
 
 // The menu renders its dropdown through `<Teleport to="body">`. Stub the
 // teleport so the content renders inline and stays queryable via `wrapper`.
 config.global.stubs = { teleport: true };
 
-function makeService(overrides: Partial<RpgAssistantService> = {}): RpgAssistantService {
+function makeService(overrides: Partial<LoreWeaveApiService> = {}): LoreWeaveApiService {
   return {
     deleteKnowRelationBetweenCharacters: vi.fn().mockResolvedValue(undefined),
     ...overrides,
-  } as unknown as RpgAssistantService;
+  } as unknown as LoreWeaveApiService;
 }
 
 function makeEdgeEvent(edgeId = 'char-1_char-2', x = 100, y = 200): EdgeEvent<MouseEvent> {
@@ -32,7 +32,7 @@ describe('EdgeContextMenuComponent', () => {
   it('menu is hidden by default', () => {
     const wrapper = mount(EdgeContextMenuComponent, {
       props: {
-        rpgAssistantService: makeService(),
+        loreWeaveApiService: makeService(),
         selectedEdgeId: 'char-1_char-2',
         edgeIdSeparator: '_',
       },
@@ -44,7 +44,7 @@ describe('EdgeContextMenuComponent', () => {
   it('showEdgeContextMenu opens the menu', async () => {
     const wrapper = mount(EdgeContextMenuComponent, {
       props: {
-        rpgAssistantService: makeService(),
+        loreWeaveApiService: makeService(),
         selectedEdgeId: 'char-1_char-2',
         edgeIdSeparator: '_',
       },
@@ -59,7 +59,7 @@ describe('EdgeContextMenuComponent', () => {
   it('hideMenu closes the menu', async () => {
     const wrapper = mount(EdgeContextMenuComponent, {
       props: {
-        rpgAssistantService: makeService(),
+        loreWeaveApiService: makeService(),
         selectedEdgeId: 'char-1_char-2',
         edgeIdSeparator: '_',
       },
@@ -76,7 +76,7 @@ describe('EdgeContextMenuComponent', () => {
   it('choosing update relation emits openUpdateKnowEdgeDialog and closes the menu', async () => {
     const wrapper = mount(EdgeContextMenuComponent, {
       props: {
-        rpgAssistantService: makeService(),
+        loreWeaveApiService: makeService(),
         selectedEdgeId: 'char-1_char-2',
         edgeIdSeparator: '_',
       },
@@ -93,7 +93,7 @@ describe('EdgeContextMenuComponent', () => {
   it('update relation button is disabled when no edge is selected', () => {
     const wrapper = mount(EdgeContextMenuComponent, {
       props: {
-        rpgAssistantService: makeService(),
+        loreWeaveApiService: makeService(),
         selectedEdgeId: undefined,
         edgeIdSeparator: '_',
       },
@@ -107,7 +107,7 @@ describe('EdgeContextMenuComponent', () => {
     const service = makeService();
     const wrapper = mount(EdgeContextMenuComponent, {
       props: {
-        rpgAssistantService: service,
+        loreWeaveApiService: service,
         selectedEdgeId: 'char-1_char-2',
         edgeIdSeparator: '_',
       },

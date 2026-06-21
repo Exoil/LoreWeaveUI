@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from 'vue';
-import type { RpgAssistantService } from '@/services/RpgAssistantService';
+import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { CharacterNode } from '@/models/CharacterNode';
 import { Character } from '@/services/Models/Character';
 
 const props = defineProps<{
-  rpgAssistantService: RpgAssistantService;
+  loreWeaveApiService: LoreWeaveApiService;
 }>();
 
 const open = defineModel<boolean>('open', { required: true });
@@ -22,7 +22,7 @@ async function onClickCreateCharacter() {
   controller = new AbortController();
 
   const signal = controller.signal;
-  const createResult = await props.rpgAssistantService.createCharacterAsync(
+  const createResult = await props.loreWeaveApiService.createCharacterAsync(
     characterCreateName.value,
     signal,
   );

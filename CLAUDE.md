@@ -9,6 +9,7 @@ Claude reads matching files:
 | HTTP / API client layering | `.claude/rules/http-client.md` | `src/services/**`                         |
 | Components                 | `.claude/rules/components.md`  | `src/components/**`, `src/App.vue`        |
 | Composables                | `.claude/rules/composables.md` | `src/composables/**`                      |
+| App.vue & graph composables| `.claude/rules/app-graph.md`   | `src/App.vue`, `src/composables/useGraph*`|
 | Models (API vs UI)         | `.claude/rules/models.md`      | `src/models/**`, `src/services/Models/**` |
 | Testing (Vitest)           | `.claude/rules/testing.md`     | `src/__tests__/**`, `*.spec.ts`           |
 | Foundry VTT module         | `.claude/rules/foundry.md`     | `**/module.json`, `**/foundry/**`         |
@@ -48,13 +49,15 @@ src/
 ├── components/                     <- reusable Vue components
 │   └── menus/                      <- context menus
 ├── composables/                    <- reusable composition functions (use*)
+│                                      incl. the App.vue graph composables
+│                                      (see .claude/rules/app-graph.md)
 ├── foundry/                        <- Foundry-host glue (ApplicationV2, hooks, constants)
 ├── models/                         <- UI-only models (e.g. CharacterNode, KnowEdge for v-network-graph)
 ├── services/
-│   ├── RpgAssistantService.ts      <- friendly wrapper used by UI (talks to the backend)
+│   ├── LoreWeaveApiService.ts      <- friendly wrapper used by UI (talks to the backend)
 │   ├── Models/                     <- API/domain models (Character, RelationPath, PageQuery, ...)
 │   └── httpClients/
-│       └── RpgAssistantClient.ts   <- NSwag-generated (do not hand-edit)
+│       └── LoreWeaveApiClient.ts   <- NSwag-generated (do not hand-edit)
 └── __tests__/                      <- Vitest specs, mirroring src layout
     ├── components/
     ├── composables/
@@ -64,9 +67,11 @@ src/
 Path alias: `@/<x>` resolves to `src/<x>` (configured in `tsconfig.app.json`
 and `vite.config.ts`).
 
-The names `RpgAssistantService` / `RpgAssistantClient` refer to the **backend
-API** this module talks to. The backend is a separate project still called
-RpgAssistant; do not rename those identifiers when refactoring this repo.
+The frontend's API layer is named after **this** project: `LoreWeaveApiService`
+(friendly wrapper) and `LoreWeaveApiClient` (NSwag-generated). The **backend**
+it talks to is a separate project still called **RpgAssistant** — keep that name
+when referring to the backend repo/project in prose (e.g. in `README.md`), but
+the frontend identifiers and files use the `LoreWeaveApi*` names.
 
 ## General rules
 
