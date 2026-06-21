@@ -1,8 +1,8 @@
 ---
 paths:
-  - "frontend/**"
-  - "**/module.json"
-  - "**/foundry/**"
+  - 'frontend/**'
+  - '**/module.json'
+  - '**/foundry/**'
 ---
 
 # Foundry VTT module rules

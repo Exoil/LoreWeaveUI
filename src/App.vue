@@ -3,6 +3,7 @@ import { ref, onBeforeMount, onMounted, computed, reactive, inject } from 'vue';
 import { API_BASE_URL_KEY } from '@/foundry/injection-keys';
 import { CharacterNode } from '@/models/CharacterNode';
 import { KnowEdge } from '@/models/KnowEdge';
+import { KnowRelation } from '@/services/Models/KnowRelation';
 import * as vNG from 'v-network-graph';
 import { RpgAssistantService } from '@/services/RpgAssistantService';
 import { PageQuery } from '@/services/Models/PageQuery';
@@ -12,9 +13,12 @@ import NodeContextMenuComponent from '@/components/menus/NodeContextMenuComponen
 import EdgeContextMenuComponent from '@/components/menus/EdgeContextMenuComponent.vue';
 import ViewContextMenuComponent from '@/components/menus/ViewContextMenuComponent.vue';
 import CreateCharacterComponent from '@/components/CreateCharacterComponent.vue';
+import CreateCharacterKnowEdgeComponent from '@/components/CreateCharacterKnowEdgeComponent.vue';
 import UpdateCharacterComponent from '@/components/UpdateCharacterComponent.vue';
+import UpdateKnowEdgeComponent from '@/components/UpdateKnowEdgeComponent.vue';
 import FindPathToCharacterComponent from '@/components/FindPathToCharacterComponent.vue';
 import type { Character } from '@/services/Models/Character.ts';
+import type { VersionedKnowRelation } from '@/services/Models/VersionedKnowRelation';
 import {
   type ForceEdgeDatum,
   ForceLayout,
@@ -31,6 +35,15 @@ const firstSelectedNodeId = ref<string | null>(null);
 const secondSelectedNodeId = ref<string | null>(null);
 const selectedEdgeId = ref<string | undefined>(undefined);
 const suppressNextViewClickClear = ref(false);
+
+// The selected edge id encodes its endpoints as `<from><sep><to>`; split it so
+// the update-relation modal can address the relation by its character ids.
+const selectedEdgeFromId = computed<string | null>(
+  () => selectedEdgeId.value?.split(EdgeIdSeparator)[0] ?? null,
+);
+const selectedEdgeToId = computed<string | null>(
+  () => selectedEdgeId.value?.split(EdgeIdSeparator)[1] ?? null,
+);
 
 const selectedNodeIds = computed<string[]>({
   get() {
@@ -94,6 +107,14 @@ const nodesForGraph = computed<vNG.Nodes>(() =>
     ]),
   ),
 );
+// Edge labels only show the opening of the description so long relation notes
+// don't overflow the graph; the full text lives on the relation itself.
+const DESCRIPTION_LABEL_MAX_LENGTH = 20;
+function truncateDescription(description: string): string {
+  if (description.length <= DESCRIPTION_LABEL_MAX_LENGTH) return description;
+  return description.slice(0, DESCRIPTION_LABEL_MAX_LENGTH) + '…';
+}
+
 const edges = ref<KnowEdge[]>([]);
 const edgesForGraph = computed<vNG.Edges>(() =>
   Object.fromEntries(
@@ -113,6 +134,8 @@ const edgesForGraph = computed<vNG.Edges>(() =>
           target: e.target,
           highlighted: highlightedEdgeKeys.value.has(key),
           connectsSelected,
+          isStrong: e.isStrongRelation,
+          label: truncateDescription(e.description),
         },
       ];
     }),
@@ -133,8 +156,10 @@ onBeforeMount(() => {
 function loadData(result: Character[]) {
   nodeList.value = result.map((c) => new CharacterNode(c));
   nodeList.value.forEach((n) => {
-    n.characterData.knowCharacterIds.forEach((knowId) => {
-      edges.value.push(new KnowEdge(n.id, knowId));
+    n.characterData.knowCharacters.forEach((relation) => {
+      edges.value.push(
+        new KnowEdge(n.id, relation.characterId, relation.description, relation.isStrongRelation),
+      );
     });
   });
 }
@@ -154,6 +179,9 @@ const FIRST_SELECTED_STROKE_COLOR = '#16a34a';
 const SECOND_SELECTED_STROKE_COLOR = '#14532d';
 const SELECTED_PAIR_EDGE_COLOR = '#22c55e';
 const SELECTED_STROKE_WIDTH = 4;
+const WEAK_EDGE_DASHARRAY = '6 4';
+const DEFAULT_EDGE_WIDTH = 3;
+const EMPHASIZED_EDGE_WIDTH = 6;
 
 function setupGraphConfig() {
   graphConfiguration.node.selectable = 2;
@@ -174,7 +202,10 @@ function setupGraphConfig() {
     return DEFAULT_EDGE_COLOR;
   };
   graphConfiguration.edge.normal.width = (edge) =>
-    edge.connectsSelected || edge.highlighted ? 3 : 1;
+    edge.connectsSelected || edge.highlighted ? EMPHASIZED_EDGE_WIDTH : DEFAULT_EDGE_WIDTH;
+  // Weak relations render as a dashed line; strong relations stay solid.
+  graphConfiguration.edge.normal.dasharray = (edge) =>
+    edge.isStrong ? undefined : WEAK_EDGE_DASHARRAY;
   graphConfiguration.edge.type = 'straight';
   graphConfiguration.edge.marker.source.type = 'none';
   graphConfiguration.edge.marker.target.type = 'arrow';
@@ -246,11 +277,24 @@ function openCreateDialog() {
   createDialogOpen.value = true;
 }
 
+const createKnowEdgeModalOpen = ref(false);
+function openCreateKnowEdgeDialog() {
+  if (!firstSelectedNodeId.value || !secondSelectedNodeId.value) return;
+  createKnowEdgeModalOpen.value = true;
+}
+
 const updateNodeCharacterNodeModal = ref(false);
 
 function openUpdateDialog() {
   if (!firstSelectedNodeId.value) return;
   updateNodeCharacterNodeModal.value = true;
+}
+
+const updateKnowEdgeModalOpen = ref(false);
+
+function openUpdateKnowEdgeDialog() {
+  if (!selectedEdgeFromId.value || !selectedEdgeToId.value) return;
+  updateKnowEdgeModalOpen.value = true;
 }
 
 const findPathDialogOpen = ref(false);
@@ -293,12 +337,32 @@ function onEdgeKnowDeleted(deletedEdgeId: string) {
   edges.value.splice(idx, 1);
 }
 
-function onEdgeKnowCreated(createdEdgeId: string) {
-  const [fromId, toId] = createdEdgeId.split(EdgeIdSeparator);
-  const foundNodeIndex = nodeList.value.findIndex((n) => n.id === fromId);
+function onEdgeKnowCreated(edge: KnowEdge) {
+  const foundNodeIndex = nodeList.value.findIndex((n) => n.id === edge.source);
   if (foundNodeIndex === -1) return;
-  nodeList.value[foundNodeIndex]!.characterData.knowCharacterIds.push(toId!);
-  edges.value.push(new KnowEdge(fromId!, toId!));
+  nodeList.value[foundNodeIndex]!.characterData.knowCharacters.push(
+    new KnowRelation(edge.target, edge.description, edge.isStrongRelation),
+  );
+  edges.value.push(edge);
+}
+
+function onKnowEdgeUpdated(relation: VersionedKnowRelation) {
+  const edge = edges.value.find(
+    (e) => e.source === relation.fromCharacterId && e.target === relation.toCharacterId,
+  );
+  if (edge) {
+    edge.description = relation.description;
+    edge.isStrongRelation = relation.isStrongRelation;
+  }
+
+  const node = nodeList.value.find((n) => n.id === relation.fromCharacterId);
+  const knowRelation = node?.characterData.knowCharacters.find(
+    (k) => k.characterId === relation.toCharacterId,
+  );
+  if (knowRelation) {
+    knowRelation.description = relation.description;
+    knowRelation.isStrongRelation = relation.isStrongRelation;
+  }
 }
 
 // --- Event handlers --- //
@@ -374,23 +438,34 @@ const eventHandlers: vNG.EventHandlers = {
       :event-handlers="eventHandlers"
       v-model:selected-nodes="selectedNodeIds"
       v-model:selected-edges="selectedEdgeIds"
-    />
+    >
+      <template #edge-label="{ edge, ...slotProps }">
+        <v-edge-label
+          :text="edge.label"
+          align="center"
+          vertical-align="above"
+          fill="#374151"
+          :font-size="11"
+          v-bind="slotProps"
+        />
+      </template>
+    </v-network-graph>
     <NodeContextMenuComponent
       ref="nodeMenuRef"
       :rpgAssistantService="rpgAssistantService"
       :firstSelectedCharacterId="firstSelectedNodeId"
       :secondSelectedCharacterId="secondSelectedNodeId"
-      :edgeIdSeparator="EdgeIdSeparator"
       @openUpdateCharacterDialog="openUpdateDialog"
       @openFindPathDialog="openFindPathDialog"
+      @openCreateKnowEdgeDialog="openCreateKnowEdgeDialog"
       @deletedCharacterFromMenu="onCharacterDeleted"
-      @createKnowEdgeFromMenu="onEdgeKnowCreated"
     />
     <EdgeContextMenuComponent
       ref="edgeMenuRef"
       :rpgAssistantService="rpgAssistantService"
       :selectedEdgeId="selectedEdgeId"
       :edgeIdSeparator="EdgeIdSeparator"
+      @openUpdateKnowEdgeDialog="openUpdateKnowEdgeDialog"
       @deleteKnowEdgeFromMenu="onEdgeKnowDeleted"
     />
     <ViewContextMenuComponent ref="viewMenuRef" @openCreateCharacterDialog="openCreateDialog" />
@@ -406,6 +481,22 @@ const eventHandlers: vNG.EventHandlers = {
       :rpgAssistantService="rpgAssistantService"
       :characterId="firstSelectedNodeId"
       @updatedCharacter="onCharacterUpdated"
+    />
+
+    <CreateCharacterKnowEdgeComponent
+      v-model:open="createKnowEdgeModalOpen"
+      :rpgAssistantService="rpgAssistantService"
+      :fromNodeId="firstSelectedNodeId"
+      :targetNodeId="secondSelectedNodeId"
+      @createKnowEdge="onEdgeKnowCreated"
+    />
+
+    <UpdateKnowEdgeComponent
+      v-model:open="updateKnowEdgeModalOpen"
+      :rpgAssistantService="rpgAssistantService"
+      :fromCharacterId="selectedEdgeFromId"
+      :toCharacterId="selectedEdgeToId"
+      @updatedKnowEdge="onKnowEdgeUpdated"
     />
 
     <FindPathToCharacterComponent

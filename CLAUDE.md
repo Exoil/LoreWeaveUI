@@ -4,14 +4,14 @@ This file applies to **every** file in the repo and holds only cross-cutting
 rules. Path-scoped guidance lives in `.claude/rules/` and loads only when
 Claude reads matching files:
 
-| Topic                      | Rule file                      | Loads for                                  |
-| -------------------------- | ------------------------------ | ------------------------------------------ |
-| HTTP / API client layering | `.claude/rules/http-client.md` | `src/services/**`                          |
-| Components                 | `.claude/rules/components.md`  | `src/components/**`, `src/App.vue`         |
-| Composables                | `.claude/rules/composables.md` | `src/composables/**`                       |
-| Models (API vs UI)         | `.claude/rules/models.md`      | `src/models/**`, `src/services/Models/**`  |
-| Testing (Vitest)           | `.claude/rules/testing.md`     | `src/__tests__/**`, `*.spec.ts`            |
-| Foundry VTT module         | `.claude/rules/foundry.md`     | `**/module.json`, `**/foundry/**`          |
+| Topic                      | Rule file                      | Loads for                                 |
+| -------------------------- | ------------------------------ | ----------------------------------------- |
+| HTTP / API client layering | `.claude/rules/http-client.md` | `src/services/**`                         |
+| Components                 | `.claude/rules/components.md`  | `src/components/**`, `src/App.vue`        |
+| Composables                | `.claude/rules/composables.md` | `src/composables/**`                      |
+| Models (API vs UI)         | `.claude/rules/models.md`      | `src/models/**`, `src/services/Models/**` |
+| Testing (Vitest)           | `.claude/rules/testing.md`     | `src/__tests__/**`, `*.spec.ts`           |
+| Foundry VTT module         | `.claude/rules/foundry.md`     | `**/module.json`, `**/foundry/**`         |
 
 ## Context
 
