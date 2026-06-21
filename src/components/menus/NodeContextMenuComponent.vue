@@ -2,6 +2,7 @@
 import * as vNG from 'v-network-graph';
 import type { RpgAssistantService } from '@/services/RpgAssistantService';
 import DeleteCharacterComponent from '@/components/DeleteCharacterComponent.vue';
+import ContextMenuRoot from '@/components/menus/ContextMenuRoot.vue';
 import { useContextMenu } from '@/composables/useContextMenu';
 
 const { menuEl, isOpen, pos, showContextMenu, hideMenu } = useContextMenu();
@@ -56,58 +57,56 @@ defineExpose({
 </script>
 
 <template>
-  <Teleport to="body">
-    <div class="loreweaveui-root">
-      <div
-        ref="menuEl"
-        class="dropdown node-context-dropdown"
-        :class="{ 'is-active': isOpen }"
-        :style="{ left: `${pos.x}px`, top: `${pos.y}px` }"
-      >
-        <div class="dropdown-menu" role="menu">
-          <div class="dropdown-content">
-            <button
-              class="dropdown-item"
-              type="button"
-              @click="onUpdateClick"
+  <ContextMenuRoot>
+    <div
+      ref="menuEl"
+      class="dropdown node-context-dropdown"
+      :class="{ 'is-active': isOpen }"
+      :style="{ left: `${pos.x}px`, top: `${pos.y}px` }"
+    >
+      <div class="dropdown-menu" role="menu">
+        <div class="dropdown-content">
+          <button
+            class="dropdown-item"
+            type="button"
+            @click="onUpdateClick"
+            :disabled="!firstSelectedCharacterId"
+          >
+            Update character
+          </button>
+
+          <button
+            id="node-context-find-path-button"
+            class="dropdown-item"
+            type="button"
+            @click="onFindPathClick"
+            :disabled="!firstSelectedCharacterId"
+          >
+            Search path to
+          </button>
+
+          <div class="dropdown-item dropdown-item--embedded">
+            <DeleteCharacterComponent
               :disabled="!firstSelectedCharacterId"
-            >
-              Update character
-            </button>
-
-            <button
-              id="node-context-find-path-button"
-              class="dropdown-item"
-              type="button"
-              @click="onFindPathClick"
-              :disabled="!firstSelectedCharacterId"
-            >
-              Search path to
-            </button>
-
-            <div class="dropdown-item dropdown-item--embedded">
-              <DeleteCharacterComponent
-                :disabled="!firstSelectedCharacterId"
-                :rpgAssistantService="rpgAssistantService"
-                :characterId="firstSelectedCharacterId"
-                @deletedCharacter="onCharacterDeleted"
-              />
-            </div>
-
-            <button
-              id="node-context-create-know-edge-button"
-              class="dropdown-item"
-              type="button"
-              @click="onCreateKnowEdgeClick"
-              :disabled="!firstSelectedCharacterId || !secondSelectedCharacterId"
-            >
-              Create know edge
-            </button>
+              :rpgAssistantService="rpgAssistantService"
+              :characterId="firstSelectedCharacterId"
+              @deletedCharacter="onCharacterDeleted"
+            />
           </div>
+
+          <button
+            id="node-context-create-know-edge-button"
+            class="dropdown-item"
+            type="button"
+            @click="onCreateKnowEdgeClick"
+            :disabled="!firstSelectedCharacterId || !secondSelectedCharacterId"
+          >
+            Create know edge
+          </button>
         </div>
       </div>
     </div>
-  </Teleport>
+  </ContextMenuRoot>
 </template>
 
 <style scoped>

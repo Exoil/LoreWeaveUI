@@ -2,6 +2,7 @@
 import * as vNG from 'v-network-graph';
 import type { RpgAssistantService } from '@/services/RpgAssistantService';
 import DeleteKnowCharacterEdgeComponent from '@/components/DeleteKnowCharacterEdgeComponent.vue';
+import ContextMenuRoot from '@/components/menus/ContextMenuRoot.vue';
 import { useContextMenu } from '@/composables/useContextMenu';
 
 const { menuEl, isOpen, pos, showContextMenu, hideMenu } = useContextMenu();
@@ -42,38 +43,36 @@ defineExpose({
 </script>
 
 <template>
-  <Teleport to="body">
-    <div class="loreweaveui-root">
-      <div
-        ref="menuEl"
-        class="dropdown context-dropdown"
-        :class="{ 'is-active': isOpen }"
-        :style="{ left: `${pos.x}px`, top: `${pos.y}px` }"
-      >
-        <div class="dropdown-menu" role="menu">
-          <div class="dropdown-content">
-            <button
-              id="edge-context-update-button"
-              class="dropdown-item"
-              type="button"
-              @click="onUpdateClick"
-              :disabled="!selectedEdgeId"
-            >
-              Update relation
-            </button>
-            <div class="dropdown-item">
-              <DeleteKnowCharacterEdgeComponent
-                :rpgAssistantService="rpgAssistantService"
-                :edgeId="selectedEdgeId"
-                :edgeIdSeparator="edgeIdSeparator"
-                @deletedKnowEdge="onEdgeKnowDeleted"
-              />
-            </div>
+  <ContextMenuRoot>
+    <div
+      ref="menuEl"
+      class="dropdown context-dropdown"
+      :class="{ 'is-active': isOpen }"
+      :style="{ left: `${pos.x}px`, top: `${pos.y}px` }"
+    >
+      <div class="dropdown-menu" role="menu">
+        <div class="dropdown-content">
+          <button
+            id="edge-context-update-button"
+            class="dropdown-item"
+            type="button"
+            @click="onUpdateClick"
+            :disabled="!selectedEdgeId"
+          >
+            Update relation
+          </button>
+          <div class="dropdown-item">
+            <DeleteKnowCharacterEdgeComponent
+              :rpgAssistantService="rpgAssistantService"
+              :edgeId="selectedEdgeId"
+              :edgeIdSeparator="edgeIdSeparator"
+              @deletedKnowEdge="onEdgeKnowDeleted"
+            />
           </div>
         </div>
       </div>
     </div>
-  </Teleport>
+  </ContextMenuRoot>
 </template>
 
 <style scoped>

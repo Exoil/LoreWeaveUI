@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import * as vNG from 'v-network-graph';
+import ContextMenuRoot from '@/components/menus/ContextMenuRoot.vue';
 import { useContextMenu } from '@/composables/useContextMenu';
 
 const { menuEl, isOpen, pos, showContextMenu, hideMenu } = useContextMenu();
@@ -27,24 +28,22 @@ defineExpose({
 </script>
 
 <template>
-  <Teleport to="body">
-    <div class="loreweaveui-root">
-      <div
-        ref="menuEl"
-        class="dropdown context-dropdown"
-        :class="{ 'is-active': isOpen }"
-        :style="{ left: `${pos.x}px`, top: `${pos.y}px` }"
-      >
-        <div class="dropdown-menu" role="menu">
-          <div class="dropdown-content">
-            <button class="dropdown-item" type="button" @click="onCreateClick">
-              Create character
-            </button>
-          </div>
+  <ContextMenuRoot>
+    <div
+      ref="menuEl"
+      class="dropdown context-dropdown"
+      :class="{ 'is-active': isOpen }"
+      :style="{ left: `${pos.x}px`, top: `${pos.y}px` }"
+    >
+      <div class="dropdown-menu" role="menu">
+        <div class="dropdown-content">
+          <button class="dropdown-item" type="button" @click="onCreateClick">
+            Create character
+          </button>
         </div>
       </div>
     </div>
-  </Teleport>
+  </ContextMenuRoot>
 </template>
 
 <style scoped>
