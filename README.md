@@ -65,4 +65,5 @@ push and PR.
 
 ## License
 
-TBD.
+Licensed under the [PolyForm Noncommercial License 1.0.0](./LICENSE.md).
+Noncommercial use is permitted; for commercial use, contact the author.
