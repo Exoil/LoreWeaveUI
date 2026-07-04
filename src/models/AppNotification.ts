@@ -1,4 +1,4 @@
-/** Bulma colour modifier used when rendering a notification toast. */
+no/** Bulma colour modifier used when rendering a notification toast. */
 export type AppNotificationType = 'danger' | 'warning' | 'info' | 'success';
 
 /**
