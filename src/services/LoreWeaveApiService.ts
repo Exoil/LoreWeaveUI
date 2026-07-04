@@ -1,3 +1,4 @@
+import axios, { isAxiosError } from 'axios';
 import {
   type CharacterPayloadWithRelations,
   CreateCharacterDto,
@@ -19,6 +20,7 @@ import { RelationPath } from '@/services/Models/RelationPath.ts';
 import { Fact } from '@/services/Models/Fact.ts';
 import { VersionedFact } from '@/services/Models/VersionedFact.ts';
 import type { UpdateFact } from '@/services/Models/UpdateFact.ts';
+import type { NotificationService } from '@/services/NotificationService';
 
 /**
  * Friendly wrapper around the NSwag-generated {@link LoreWeaveApiClient} that the
@@ -30,9 +32,30 @@ import type { UpdateFact } from '@/services/Models/UpdateFact.ts';
 export class LoreWeaveApiService {
   private _loreWeaveApiClient: LoreWeaveApiClient;
 
-  /** @param baseUrl API base URL ('' = same origin; absolute URL inside Foundry). */
-  constructor(baseUrl: string) {
-    this._loreWeaveApiClient = new LoreWeaveApiClient(baseUrl);
+  /**
+   * @param baseUrl API base URL ('' = same origin; absolute URL inside Foundry).
+   * @param notificationService When given, every 4xx/5xx response (and any
+   *        network failure) is published as an error notification. The error
+   *        still propagates to the caller unchanged.
+   */
+  constructor(baseUrl: string, notificationService?: NotificationService) {
+    const instance = axios.create();
+
+    if (notificationService) {
+      instance.interceptors.response.use(
+        (response) => response,
+        (error: unknown) => {
+          // One central hook for every endpoint. Aborted requests are the
+          // caller's own doing — never toast those.
+          if (isAxiosError(error) && error.code !== 'ERR_CANCELED') {
+            notificationService.notifyHttpError(error.response?.status);
+          }
+          return Promise.reject(error);
+        },
+      );
+    }
+
+    this._loreWeaveApiClient = new LoreWeaveApiClient(baseUrl, instance);
   }
 
   /** Map a generated character payload (+ its relations and facts) to the domain {@link Character}. */

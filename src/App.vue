@@ -9,7 +9,9 @@
 import { ref, computed, onBeforeMount, onMounted, inject } from 'vue';
 import { API_BASE_URL_KEY } from '@/foundry/injection-keys';
 import { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
+import { NotificationService } from '@/services/NotificationService';
 import { PageQuery } from '@/services/Models/PageQuery';
+import NotificationListComponent from '@/components/NotificationListComponent.vue';
 import NodeContextMenuComponent from '@/components/menus/NodeContextMenuComponent.vue';
 import FactNodeContextMenuComponent from '@/components/menus/FactNodeContextMenuComponent.vue';
 import EdgeContextMenuComponent from '@/components/menus/EdgeContextMenuComponent.vue';
@@ -38,6 +40,9 @@ import {
 //  - Foundry module: absolute URL from the loreweaveui.apiBaseUrl world
 //    setting (Foundry lives on :30000 and cannot serve /v1/).
 const apiBaseUrl = inject(API_BASE_URL_KEY, '');
+// Error toasts: the API service publishes every 4xx/5xx response here and the
+// NotificationListComponent renders them (see src/services/NotificationService.ts).
+const notificationService = new NotificationService();
 let loreWeaveApiService: LoreWeaveApiService;
 
 // --- Graph styling, state and behaviour (see src/composables) -------------
@@ -95,7 +100,7 @@ const selectedEdgeIsFactEdge = computed<boolean>(() =>
 );
 
 onBeforeMount(() => {
-  loreWeaveApiService = new LoreWeaveApiService(apiBaseUrl);
+  loreWeaveApiService = new LoreWeaveApiService(apiBaseUrl, notificationService);
 });
 
 onMounted(async () => {
@@ -250,6 +255,8 @@ function openUpdateFactDialog() {
       :factId="selectedFactNodeId"
       @updatedFact="onFactUpdated"
     />
+
+    <NotificationListComponent :notificationService="notificationService" />
 
     <button
       v-if="pathCharacterIds.length > 0"
