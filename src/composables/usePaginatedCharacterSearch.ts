@@ -9,6 +9,8 @@ export interface UsePaginatedCharacterSearchOptions {
   debounceMs?: number;
   /** Optional id to drop from results, e.g. the "from" character in path search. */
   excludeId?: () => string | null | undefined;
+  /** Optional ids to drop from results, e.g. characters already connected to a fact. */
+  excludeIds?: () => readonly string[] | null | undefined;
 }
 
 /**
@@ -41,9 +43,11 @@ export function usePaginatedCharacterSearch(
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   const filteredItems = computed<Character[]>(() => {
-    const excluded = options.excludeId?.();
-    if (!excluded) return items.value;
-    return items.value.filter((c) => c.id !== excluded);
+    const excluded = new Set(options.excludeIds?.() ?? []);
+    const excludedId = options.excludeId?.();
+    if (excludedId) excluded.add(excludedId);
+    if (excluded.size === 0) return items.value;
+    return items.value.filter((c) => !excluded.has(c.id));
   });
 
   /** Abort any in-flight request and clear results back to the empty state. */

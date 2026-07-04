@@ -60,6 +60,11 @@ export function useGraphData(selection: GraphSelection) {
     return nodeList.value.find((n) => n.id === id)?.name;
   }
 
+  /** Ids of the characters already connected to the given fact. */
+  function getCharacterIdsConnectedToFact(factId: string): string[] {
+    return factEdges.value.filter((e) => e.target === factId).map((e) => e.source);
+  }
+
   // Ids of the characters on the currently highlighted relation path (the
   // result of "find path between A and B"), in order.
   const pathCharacterIds = ref<string[]>([]);
@@ -229,6 +234,16 @@ export function useGraphData(selection: GraphSelection) {
     selection.selectedFactNodeId.value = factNode.id;
   }
 
+  /** Connect an existing fact to one more character: a new edge + the fact on that character. */
+  function onFactConnected(characterId: string, factId: string) {
+    const factNode = factNodeList.value.find((f) => f.id === factId);
+    const node = nodeList.value.find((n) => n.id === characterId);
+    if (!factNode || !node) return;
+    if (factEdges.value.some((e) => e.source === characterId && e.target === factId)) return;
+    factEdges.value.push(new FactEdge(characterId, factId));
+    node.characterData.facts.push(factNode.factData);
+  }
+
   /** Apply a fact edit (title / content) coming back from the update modal. */
   function onFactUpdated(updatedFact: VersionedFact) {
     const factNode = factNodeList.value.find((f) => f.id === updatedFact.id);
@@ -282,6 +297,7 @@ export function useGraphData(selection: GraphSelection) {
     getFactById,
     getKnowEdgeById,
     getCharacterNameById,
+    getCharacterIdsConnectedToFact,
     loadData,
     onCharacterCreated,
     onCharacterDeleted,
@@ -290,6 +306,7 @@ export function useGraphData(selection: GraphSelection) {
     onEdgeKnowCreated,
     onKnowEdgeUpdated,
     onFactCreated,
+    onFactConnected,
     onFactUpdated,
     onFactDeleted,
     onFactEdgeDeleted,

@@ -19,12 +19,19 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   openUpdateFactDialog: [];
+  openConnectFactDialog: [];
   deletedFactFromMenu: [deletedFactId: string];
 }>();
 
 function onUpdateClick() {
   if (!props.selectedFactId) return;
   emit('openUpdateFactDialog');
+  hideMenu();
+}
+
+function onConnectClick() {
+  if (!props.selectedFactId) return;
+  emit('openConnectFactDialog');
   hideMenu();
 }
 
@@ -65,6 +72,16 @@ defineExpose({
             :disabled="!selectedFactId"
           >
             Update fact
+          </button>
+
+          <button
+            id="fact-context-connect-button"
+            class="dropdown-item"
+            type="button"
+            @click="onConnectClick"
+            :disabled="!selectedFactId"
+          >
+            Connect to character
           </button>
 
           <div class="dropdown-item dropdown-item--embedded">

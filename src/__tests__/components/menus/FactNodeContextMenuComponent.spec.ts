@@ -79,6 +79,26 @@ describe('FactNodeContextMenuComponent', () => {
     expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
   });
 
+  it('choosing connect to character emits openConnectFactDialog and closes the menu', async () => {
+    const wrapper = mount(FactNodeContextMenuComponent, { props: defaultProps() });
+    (wrapper.vm as unknown as ExposedFactMenu).showFactNodeContextMenu(makeNodeEvent());
+    await nextTick();
+
+    await wrapper.find('#fact-context-connect-button').trigger('click');
+
+    expect(wrapper.emitted('openConnectFactDialog')).toHaveLength(1);
+    expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
+  });
+
+  it('connect to character button is disabled when no fact is selected', () => {
+    const wrapper = mount(FactNodeContextMenuComponent, {
+      props: defaultProps({ selectedFactId: null }),
+    });
+
+    const button = wrapper.find<HTMLButtonElement>('#fact-context-connect-button');
+    expect(button.element.disabled).toBe(true);
+  });
+
   it('update fact button is disabled when no fact is selected', () => {
     const wrapper = mount(FactNodeContextMenuComponent, {
       props: defaultProps({ selectedFactId: null }),

@@ -26,6 +26,7 @@ import FindPathToCharacterComponent from '@/components/FindPathToCharacterCompon
 import FactTooltipComponent from '@/components/FactTooltipComponent.vue';
 import FactDetailsComponent from '@/components/FactDetailsComponent.vue';
 import KnowEdgeDetailsComponent from '@/components/KnowEdgeDetailsComponent.vue';
+import ConnectFactToCharacterComponent from '@/components/ConnectFactToCharacterComponent.vue';
 import { useGraphConfiguration } from '@/composables/useGraphConfiguration';
 import { useGraphSelection, EDGE_ID_SEPARATOR } from '@/composables/useGraphSelection';
 import { useGraphData } from '@/composables/useGraphData';
@@ -97,6 +98,7 @@ const {
   onEdgeKnowDeleted,
   onKnowEdgeUpdated,
   onFactCreated,
+  onFactConnected,
   onFactUpdated,
   onFactDeleted,
   onFactEdgeDeleted,
@@ -161,6 +163,17 @@ const updateFactDialogOpen = ref(false);
 function openUpdateFactDialog() {
   if (!selectedFactNodeId.value) return;
   updateFactDialogOpen.value = true;
+}
+
+// Connect the selected fact to one more character; already-connected
+// characters are excluded from the search results.
+const connectFactDialogOpen = ref(false);
+const connectedCharacterIdsForSelectedFact = computed<string[]>(() =>
+  selectedFactNodeId.value ? graph.getCharacterIdsConnectedToFact(selectedFactNodeId.value) : [],
+);
+function openConnectFactDialog() {
+  if (!selectedFactNodeId.value) return;
+  connectFactDialogOpen.value = true;
 }
 
 // Read-only fact window, opened by left-clicking a fact node (the interaction
@@ -234,6 +247,7 @@ function openKnowEdgeDetailsDialog(edgeId: string) {
       :loreWeaveApiService="loreWeaveApiService"
       :selectedFactId="selectedFactNodeId"
       @openUpdateFactDialog="openUpdateFactDialog"
+      @openConnectFactDialog="openConnectFactDialog"
       @deletedFactFromMenu="onFactDeleted"
     />
     <EdgeContextMenuComponent
@@ -296,6 +310,14 @@ function openKnowEdgeDetailsDialog(edgeId: string) {
       :loreWeaveApiService="loreWeaveApiService"
       :factId="selectedFactNodeId"
       @updatedFact="onFactUpdated"
+    />
+
+    <ConnectFactToCharacterComponent
+      v-model:open="connectFactDialogOpen"
+      :loreWeaveApiService="loreWeaveApiService"
+      :factId="selectedFactNodeId"
+      :connectedCharacterIds="connectedCharacterIdsForSelectedFact"
+      @factConnected="onFactConnected"
     />
 
     <FactTooltipComponent ref="factTooltipRef" :getFactById="graph.getFactById" />
