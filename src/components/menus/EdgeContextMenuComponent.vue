@@ -1,12 +1,14 @@
 <script setup lang="ts">
 /**
- * Right-click context menu for a graph edge (relation). Offers update + delete
- * for the `selectedEdgeId`. Opened imperatively by the parent via the exposed
- * {@link showEdgeContextMenu}.
+ * Right-click context menu for a graph edge. For a know edge (relation) it
+ * offers update + delete; for a fact edge (`isFactEdge`) only "delete fact
+ * edge" — the connection carries no properties, so there is nothing to update.
+ * Opened imperatively by the parent via the exposed {@link showEdgeContextMenu}.
  */
 import * as vNG from 'v-network-graph';
 import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import DeleteKnowCharacterEdgeComponent from '@/components/DeleteKnowCharacterEdgeComponent.vue';
+import DeleteFactEdgeComponent from '@/components/DeleteFactEdgeComponent.vue';
 import ContextMenuRoot from '@/components/menus/ContextMenuRoot.vue';
 import { useContextMenu } from '@/composables/useContextMenu';
 
@@ -16,11 +18,13 @@ const props = defineProps<{
   loreWeaveApiService: LoreWeaveApiService;
   selectedEdgeId: string | undefined;
   edgeIdSeparator: string;
+  isFactEdge: boolean;
 }>();
 
 const emit = defineEmits<{
   openUpdateKnowEdgeDialog: [];
   deleteKnowEdgeFromMenu: [createdEdgeId: string];
+  deleteFactEdgeFromMenu: [deletedEdgeId: string];
 }>();
 
 function onUpdateClick() {
@@ -31,6 +35,11 @@ function onUpdateClick() {
 
 function onEdgeKnowDeleted(deletedEdgeId: string) {
   emit('deleteKnowEdgeFromMenu', deletedEdgeId);
+  hideMenu();
+}
+
+function onFactEdgeDeleted(deletedEdgeId: string) {
+  emit('deleteFactEdgeFromMenu', deletedEdgeId);
   hideMenu();
 }
 
@@ -58,21 +67,31 @@ defineExpose({
     >
       <div class="dropdown-menu" role="menu">
         <div class="dropdown-content">
-          <button
-            id="edge-context-update-button"
-            class="dropdown-item"
-            type="button"
-            @click="onUpdateClick"
-            :disabled="!selectedEdgeId"
-          >
-            Update relation
-          </button>
-          <div class="dropdown-item">
-            <DeleteKnowCharacterEdgeComponent
+          <template v-if="!isFactEdge">
+            <button
+              id="edge-context-update-button"
+              class="dropdown-item"
+              type="button"
+              @click="onUpdateClick"
+              :disabled="!selectedEdgeId"
+            >
+              Update relation
+            </button>
+            <div class="dropdown-item">
+              <DeleteKnowCharacterEdgeComponent
+                :loreWeaveApiService="loreWeaveApiService"
+                :edgeId="selectedEdgeId"
+                :edgeIdSeparator="edgeIdSeparator"
+                @deletedKnowEdge="onEdgeKnowDeleted"
+              />
+            </div>
+          </template>
+          <div v-else class="dropdown-item">
+            <DeleteFactEdgeComponent
               :loreWeaveApiService="loreWeaveApiService"
               :edgeId="selectedEdgeId"
               :edgeIdSeparator="edgeIdSeparator"
-              @deletedKnowEdge="onEdgeKnowDeleted"
+              @deletedFactEdge="onFactEdgeDeleted"
             />
           </div>
         </div>

@@ -2,10 +2,13 @@ import { computed, ref } from 'vue';
 import * as vNG from 'v-network-graph';
 import { CharacterNode } from '@/models/CharacterNode';
 import { KnowEdge } from '@/models/KnowEdge';
+import { FactNode } from '@/models/FactNode';
+import { FactEdge } from '@/models/FactEdge';
 import { KnowRelation } from '@/services/Models/KnowRelation';
 import type { Character } from '@/services/Models/Character';
 import type { VersionedCharacter } from '@/services/Models/VersionedCharacter';
 import type { VersionedKnowRelation } from '@/services/Models/VersionedKnowRelation';
+import type { VersionedFact } from '@/services/Models/VersionedFact';
 import { EDGE_ID_SEPARATOR, type GraphSelection } from './useGraphSelection';
 
 // Edge labels only show the opening of the description so long relation notes
@@ -32,6 +35,13 @@ function truncateDescription(description: string): string {
 export function useGraphData(selection: GraphSelection) {
   const nodeList = ref<CharacterNode[]>([]);
   const edges = ref<KnowEdge[]>([]);
+  const factNodeList = ref<FactNode[]>([]);
+  const factEdges = ref<FactEdge[]>([]);
+
+  /** Whether the given graph node id belongs to a fact node (vs. a character). */
+  function isFactNode(id: string): boolean {
+    return factNodeList.value.some((f) => f.id === id);
+  }
 
   // Ids of the characters on the currently highlighted relation path (the
   // result of "find path between A and B"), in order.
@@ -46,10 +56,10 @@ export function useGraphData(selection: GraphSelection) {
     return keys;
   });
 
-  /** Character nodes shaped for <v-network-graph>, with selection/highlight flags. */
+  /** Character + fact nodes shaped for <v-network-graph>, with selection/highlight flags. */
   const nodesForGraph = computed<vNG.Nodes>(() =>
-    Object.fromEntries(
-      nodeList.value.map((n) => [
+    Object.fromEntries([
+      ...nodeList.value.map((n) => [
         n.id,
         {
           name: n.name,
@@ -58,13 +68,21 @@ export function useGraphData(selection: GraphSelection) {
           isSecondSelected: selection.secondSelectedNodeId.value === n.id,
         },
       ]),
-    ),
+      ...factNodeList.value.map((f) => [
+        f.id,
+        {
+          name: f.name,
+          isFact: true,
+          isFactSelected: selection.selectedFactNodeId.value === f.id,
+        },
+      ]),
+    ]),
   );
 
-  /** Relation edges shaped for <v-network-graph>, with selection/highlight flags. */
+  /** Relation + fact edges shaped for <v-network-graph>, with selection/highlight flags. */
   const edgesForGraph = computed<vNG.Edges>(() =>
-    Object.fromEntries(
-      edges.value.map((e) => {
+    Object.fromEntries([
+      ...edges.value.map((e) => {
         const key = e.source + EDGE_ID_SEPARATOR + e.target;
         const first = selection.firstSelectedNodeId.value;
         const second = selection.secondSelectedNodeId.value;
@@ -85,7 +103,15 @@ export function useGraphData(selection: GraphSelection) {
           },
         ];
       }),
-    ),
+      ...factEdges.value.map((e) => [
+        e.source + EDGE_ID_SEPARATOR + e.target,
+        {
+          source: e.source,
+          target: e.target,
+          isFactEdge: true,
+        },
+      ]),
+    ]),
   );
 
   /** Replace the whole graph from a freshly fetched list of characters. */
@@ -98,6 +124,22 @@ export function useGraphData(selection: GraphSelection) {
         );
       });
     });
+
+    // The same fact can be connected to several characters — one node per fact
+    // id, one edge per character↔fact connection.
+    const factsById = new Map<string, FactNode>();
+    factNodeList.value = [];
+    factEdges.value = [];
+    nodeList.value.forEach((n) => {
+      n.characterData.facts.forEach((fact) => {
+        if (!factsById.has(fact.id)) {
+          const factNode = new FactNode(fact);
+          factsById.set(fact.id, factNode);
+          factNodeList.value.push(factNode);
+        }
+        factEdges.value.push(new FactEdge(n.id, fact.id));
+      });
+    });
   }
 
   /** Add a newly created character and select it. */
@@ -106,11 +148,12 @@ export function useGraphData(selection: GraphSelection) {
     selection.firstSelectedNodeId.value = node.id;
   }
 
-  /** Remove a deleted character from the graph. */
+  /** Remove a deleted character from the graph (with its fact connections). */
   function onCharacterDeleted(id: string) {
     const idx = nodeList.value.findIndex((n) => n.id === id);
     if (idx === -1) return;
     nodeList.value.splice(idx, 1);
+    factEdges.value = factEdges.value.filter((e) => e.source !== id);
   }
 
   /** Apply a character rename coming back from the update modal. */
@@ -159,6 +202,47 @@ export function useGraphData(selection: GraphSelection) {
     }
   }
 
+  /** Add a newly created fact: a new node connected to its character, and select it. */
+  function onFactCreated(characterId: string, factNode: FactNode) {
+    const node = nodeList.value.find((n) => n.id === characterId);
+    if (!node) return;
+    node.characterData.facts.push(factNode.factData);
+    factNodeList.value.push(factNode);
+    factEdges.value.push(new FactEdge(characterId, factNode.id));
+    selection.selectedFactNodeId.value = factNode.id;
+  }
+
+  /** Apply a fact edit (title / content) coming back from the update modal. */
+  function onFactUpdated(updatedFact: VersionedFact) {
+    const factNode = factNodeList.value.find((f) => f.id === updatedFact.id);
+    if (!factNode) return;
+    factNode.updateFact(updatedFact.title, updatedFact.content);
+  }
+
+  /** Remove a deleted fact: its node, its edges, and its entries on characters. */
+  function onFactDeleted(factId: string) {
+    const idx = factNodeList.value.findIndex((f) => f.id === factId);
+    if (idx === -1) return;
+    factNodeList.value.splice(idx, 1);
+    factEdges.value = factEdges.value.filter((e) => e.target !== factId);
+    nodeList.value.forEach((n) => {
+      n.characterData.facts = n.characterData.facts.filter((f) => f.id !== factId);
+    });
+  }
+
+  /** Remove a disconnected character↔fact edge (the fact node itself stays). */
+  function onFactEdgeDeleted(deletedEdgeId: string) {
+    const [characterId, factId] = deletedEdgeId.split(EDGE_ID_SEPARATOR);
+    const idx = factEdges.value.findIndex((e) => e.source === characterId && e.target === factId);
+    if (idx === -1) return;
+    factEdges.value.splice(idx, 1);
+
+    const node = nodeList.value.find((n) => n.id === characterId);
+    if (node) {
+      node.characterData.facts = node.characterData.facts.filter((f) => f.id !== factId);
+    }
+  }
+
   /** Highlight the given ordered path of character ids. */
   function onPathFound(characterIds: string[]) {
     pathCharacterIds.value = characterIds;
@@ -172,9 +256,12 @@ export function useGraphData(selection: GraphSelection) {
   return {
     nodeList,
     edges,
+    factNodeList,
+    factEdges,
     pathCharacterIds,
     nodesForGraph,
     edgesForGraph,
+    isFactNode,
     loadData,
     onCharacterCreated,
     onCharacterDeleted,
@@ -182,6 +269,10 @@ export function useGraphData(selection: GraphSelection) {
     onEdgeKnowDeleted,
     onEdgeKnowCreated,
     onKnowEdgeUpdated,
+    onFactCreated,
+    onFactUpdated,
+    onFactDeleted,
+    onFactEdgeDeleted,
     onPathFound,
     clearHighlightedPath,
   };

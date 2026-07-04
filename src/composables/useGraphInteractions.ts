@@ -7,6 +7,9 @@ import type { GraphSelection } from './useGraphSelection';
 export interface NodeContextMenuApi {
   showNodeContextMenu(params: NodeEvent<MouseEvent>): void;
 }
+export interface FactNodeContextMenuApi {
+  showFactNodeContextMenu(params: NodeEvent<MouseEvent>): void;
+}
 export interface EdgeContextMenuApi {
   showEdgeContextMenu(params: EdgeEvent<MouseEvent>): void;
 }
@@ -14,9 +17,10 @@ export interface ViewContextMenuApi {
   showViewContextMenu(params: vNG.ViewEvent<MouseEvent>): void;
 }
 
-/** Template refs to the three context-menu components, supplied by App.vue. */
+/** Template refs to the four context-menu components, supplied by App.vue. */
 export interface GraphMenus {
   node: Ref<NodeContextMenuApi | null>;
+  factNode: Ref<FactNodeContextMenuApi | null>;
   edge: Ref<EdgeContextMenuApi | null>;
   view: Ref<ViewContextMenuApi | null>;
 }
@@ -37,6 +41,10 @@ export interface GraphMenus {
 export function useGraphInteractions(selection: GraphSelection, menus: GraphMenus) {
   function nodeClickHandler(nodeEvents: NodeEvent<MouseEvent>) {
     selection.suppressNextViewClickClear.value = true;
+    if (selection.isFactNodeId(nodeEvents.node)) {
+      selection.selectedFactNodeId.value = nodeEvents.node;
+      return;
+    }
     selection.firstSelectedNodeId.value = nodeEvents.node;
   }
 
@@ -56,6 +64,13 @@ export function useGraphInteractions(selection: GraphSelection, menus: GraphMenu
   function showNodeContextMenu(params: NodeEvent<MouseEvent>) {
     selection.suppressNextViewClickClear.value = true;
     const clickedId = params.node;
+
+    // Fact nodes have their own menu and never join the character pair.
+    if (selection.isFactNodeId(clickedId)) {
+      selection.selectedFactNodeId.value = clickedId;
+      menus.factNode.value?.showFactNodeContextMenu(params);
+      return;
+    }
 
     // Build up to a two-node selection: first empty slot wins, re-clicking an
     // already-selected node is a no-op, otherwise the second slot is replaced.

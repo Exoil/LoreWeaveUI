@@ -12,8 +12,19 @@ config.global.stubs = { teleport: true };
 function makeService(overrides: Partial<LoreWeaveApiService> = {}): LoreWeaveApiService {
   return {
     deleteKnowRelationBetweenCharacters: vi.fn().mockResolvedValue(undefined),
+    disconnectFactFromCharacterAsync: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   } as unknown as LoreWeaveApiService;
+}
+
+function defaultProps(overrides = {}) {
+  return {
+    loreWeaveApiService: makeService(),
+    selectedEdgeId: 'char-1_char-2',
+    edgeIdSeparator: '_',
+    isFactEdge: false,
+    ...overrides,
+  };
 }
 
 function makeEdgeEvent(edgeId = 'char-1_char-2', x = 100, y = 200): EdgeEvent<MouseEvent> {
@@ -31,11 +42,7 @@ type ExposedEdgeMenu = {
 describe('EdgeContextMenuComponent', () => {
   it('menu is hidden by default', () => {
     const wrapper = mount(EdgeContextMenuComponent, {
-      props: {
-        loreWeaveApiService: makeService(),
-        selectedEdgeId: 'char-1_char-2',
-        edgeIdSeparator: '_',
-      },
+      props: defaultProps(),
     });
 
     expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
@@ -43,11 +50,7 @@ describe('EdgeContextMenuComponent', () => {
 
   it('showEdgeContextMenu opens the menu', async () => {
     const wrapper = mount(EdgeContextMenuComponent, {
-      props: {
-        loreWeaveApiService: makeService(),
-        selectedEdgeId: 'char-1_char-2',
-        edgeIdSeparator: '_',
-      },
+      props: defaultProps(),
     });
 
     (wrapper.vm as unknown as ExposedEdgeMenu).showEdgeContextMenu(makeEdgeEvent());
@@ -58,11 +61,7 @@ describe('EdgeContextMenuComponent', () => {
 
   it('hideMenu closes the menu', async () => {
     const wrapper = mount(EdgeContextMenuComponent, {
-      props: {
-        loreWeaveApiService: makeService(),
-        selectedEdgeId: 'char-1_char-2',
-        edgeIdSeparator: '_',
-      },
+      props: defaultProps(),
     });
     (wrapper.vm as unknown as ExposedEdgeMenu).showEdgeContextMenu(makeEdgeEvent());
     await nextTick();
@@ -75,11 +74,7 @@ describe('EdgeContextMenuComponent', () => {
 
   it('choosing update relation emits openUpdateKnowEdgeDialog and closes the menu', async () => {
     const wrapper = mount(EdgeContextMenuComponent, {
-      props: {
-        loreWeaveApiService: makeService(),
-        selectedEdgeId: 'char-1_char-2',
-        edgeIdSeparator: '_',
-      },
+      props: defaultProps(),
     });
     (wrapper.vm as unknown as ExposedEdgeMenu).showEdgeContextMenu(makeEdgeEvent());
     await nextTick();
@@ -92,11 +87,7 @@ describe('EdgeContextMenuComponent', () => {
 
   it('update relation button is disabled when no edge is selected', () => {
     const wrapper = mount(EdgeContextMenuComponent, {
-      props: {
-        loreWeaveApiService: makeService(),
-        selectedEdgeId: undefined,
-        edgeIdSeparator: '_',
-      },
+      props: defaultProps({ selectedEdgeId: undefined }),
     });
 
     const button = wrapper.find<HTMLButtonElement>('#edge-context-update-button');
@@ -106,11 +97,7 @@ describe('EdgeContextMenuComponent', () => {
   it('deleting an edge emits deleteKnowEdgeFromMenu and closes the menu', async () => {
     const service = makeService();
     const wrapper = mount(EdgeContextMenuComponent, {
-      props: {
-        loreWeaveApiService: service,
-        selectedEdgeId: 'char-1_char-2',
-        edgeIdSeparator: '_',
-      },
+      props: defaultProps({ loreWeaveApiService: service }),
     });
     (wrapper.vm as unknown as ExposedEdgeMenu).showEdgeContextMenu(makeEdgeEvent());
     await nextTick();
@@ -119,6 +106,42 @@ describe('EdgeContextMenuComponent', () => {
     await flushPromises();
 
     expect(wrapper.emitted('deleteKnowEdgeFromMenu')).toEqual([['char-1_char-2']]);
+    expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
+  });
+
+  it('for a fact edge only the delete fact edge action is shown', async () => {
+    const wrapper = mount(EdgeContextMenuComponent, {
+      props: defaultProps({ selectedEdgeId: 'char-1_fact-1', isFactEdge: true }),
+    });
+    (wrapper.vm as unknown as ExposedEdgeMenu).showEdgeContextMenu(makeEdgeEvent('char-1_fact-1'));
+    await nextTick();
+
+    expect(wrapper.find('#edge-context-update-button').exists()).toBe(false);
+    expect(wrapper.find('#delete-know-edge-button').exists()).toBe(false);
+    expect(wrapper.find('#delete-fact-edge-button').exists()).toBe(true);
+  });
+
+  it('deleting a fact edge emits deleteFactEdgeFromMenu and closes the menu', async () => {
+    const service = makeService();
+    const wrapper = mount(EdgeContextMenuComponent, {
+      props: defaultProps({
+        loreWeaveApiService: service,
+        selectedEdgeId: 'char-1_fact-1',
+        isFactEdge: true,
+      }),
+    });
+    (wrapper.vm as unknown as ExposedEdgeMenu).showEdgeContextMenu(makeEdgeEvent('char-1_fact-1'));
+    await nextTick();
+
+    await wrapper.find('#delete-fact-edge-button').trigger('click');
+    await flushPromises();
+
+    expect(service.disconnectFactFromCharacterAsync).toHaveBeenCalledWith(
+      'char-1',
+      'fact-1',
+      expect.anything(),
+    );
+    expect(wrapper.emitted('deleteFactEdgeFromMenu')).toEqual([['char-1_fact-1']]);
     expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
   });
 });

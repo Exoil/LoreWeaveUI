@@ -42,7 +42,7 @@ export interface ILoreWeaveApiClient {
   /**
    * Update character
    * @param id Character identifier
-   * @param if_Match The ETag version of the character (integer)
+   * @param if_Match The ETag version to match, as an unsigned 16-bit integer (1..65535), optionally quoted.
    * @return No Content
    */
   updateCharacter(
@@ -93,7 +93,7 @@ export interface ILoreWeaveApiClient {
    * Update a knowledge relationship between characters
    * @param from Source character identifier
    * @param to Target character identifier
-   * @param if_Match The ETag version of the character (integer)
+   * @param if_Match The ETag version to match, as an unsigned 16-bit integer (1..65535), optionally quoted.
    * @return No Content
    */
   updateKnowRelationship(
@@ -110,6 +110,62 @@ export interface ILoreWeaveApiClient {
   deleteKnowRelationship(
     from: string,
     to: string,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<void>>;
+  /**
+   * Add a fact to a character.
+   * @param id Character identifier
+   * @return Created
+   */
+  addFactToCharacter(
+    id: string,
+    body: CreateFactDto,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<string>>;
+  /**
+   * Get a fact by id.
+   * @param id Character identifier
+   * @return Fact found
+   */
+  getFact(id: string, signal?: AbortSignal): Promise<SwaggerResponse<FactDto>>;
+  /**
+   * Update a fact.
+   * @param id Character identifier
+   * @param if_Match The ETag version to match, as an unsigned 16-bit integer (1..65535), optionally quoted.
+   * @return No Content
+   */
+  updateFact(
+    id: string,
+    if_Match: string,
+    body: UpdateFactDto,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<void>>;
+  /**
+   * Delete a fact by id.
+   * @param id Character identifier
+   * @return No Content
+   */
+  deleteFact(id: string, signal?: AbortSignal): Promise<SwaggerResponse<void>>;
+  /**
+   * Connect an existing fact to an existing character.
+   * @param characterId Character identifier
+   * @param factId Fact identifier
+   * @return No Content
+   */
+  connectFactToCharacter(
+    characterId: string,
+    factId: string,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<void>>;
+  /**
+   * Delete the connection between a character and a fact.
+   * @param characterId Character identifier
+   * @param factId Fact identifier
+   * @return No Content
+   */
+  disconnectFactFromCharacter(
+    characterId: string,
+    factId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<void>>;
 }
@@ -390,7 +446,7 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
   /**
    * Update character
    * @param id Character identifier
-   * @param if_Match The ETag version of the character (integer)
+   * @param if_Match The ETag version to match, as an unsigned 16-bit integer (1..65535), optionally quoted.
    * @return No Content
    */
   updateCharacter(
@@ -824,7 +880,7 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
    * Update a knowledge relationship between characters
    * @param from Source character identifier
    * @param to Target character identifier
-   * @param if_Match The ETag version of the character (integer)
+   * @param if_Match The ETag version to match, as an unsigned 16-bit integer (1..65535), optionally quoted.
    * @return No Content
    */
   updateKnowRelationship(
@@ -1002,6 +1058,529 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
       new SwaggerResponse(status, _headers, null as any),
     );
   }
+
+  /**
+   * Add a fact to a character.
+   * @param id Character identifier
+   * @return Created
+   */
+  addFactToCharacter(
+    id: string,
+    body: CreateFactDto,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<string>> {
+    let url_ = this.baseUrl + '/v1/characters/{id}/facts';
+    if (id === undefined || id === null)
+      throw new globalThis.Error("The parameter 'id' must be defined.");
+    url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    url_ = url_.replace(/[?&]$/, '');
+
+    const content_ = JSON.stringify(body);
+
+    let options_: AxiosRequestConfig = {
+      data: content_,
+      method: 'PUT',
+      url: url_,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      signal,
+    };
+
+    return this.instance
+      .request(options_)
+      .catch((_error: any) => {
+        if (isAxiosError(_error) && _error.response) {
+          return _error.response;
+        } else {
+          throw _error;
+        }
+      })
+      .then((_response: AxiosResponse) => {
+        return this.processAddFactToCharacter(_response);
+      });
+  }
+
+  protected processAddFactToCharacter(response: AxiosResponse): Promise<SwaggerResponse<string>> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && typeof response.headers === 'object') {
+      for (const k in response.headers) {
+        if (response.headers.hasOwnProperty(k)) {
+          _headers[k] = response.headers[k];
+        }
+      }
+    }
+    if (status === 201) {
+      const _responseText = response.data;
+      let result201: any = null;
+      let resultData201 = _responseText;
+      result201 = resultData201 !== undefined ? resultData201 : (null as any);
+
+      return Promise.resolve<SwaggerResponse<string>>(
+        new SwaggerResponse<string>(status, _headers, result201),
+      );
+    } else if (status === 400) {
+      const _responseText = response.data;
+      let result400: any = null;
+      let resultData400 = _responseText;
+      result400 = ProblemDetails.fromJS(resultData400);
+      return throwException('Bad Request', status, _responseText, _headers, result400);
+    } else if (status === 404) {
+      const _responseText = response.data;
+      let result404: any = null;
+      let resultData404 = _responseText;
+      result404 = ProblemDetails.fromJS(resultData404);
+      return throwException(
+        'The specified resource was not found',
+        status,
+        _responseText,
+        _headers,
+        result404,
+      );
+    } else if (status !== 200 && status !== 204) {
+      const _responseText = response.data;
+      return throwException(
+        'An unexpected server error occurred.',
+        status,
+        _responseText,
+        _headers,
+      );
+    }
+    return Promise.resolve<SwaggerResponse<string>>(
+      new SwaggerResponse(status, _headers, null as any),
+    );
+  }
+
+  /**
+   * Get a fact by id.
+   * @param id Character identifier
+   * @return Fact found
+   */
+  getFact(id: string, signal?: AbortSignal): Promise<SwaggerResponse<FactDto>> {
+    let url_ = this.baseUrl + '/v1/facts/{id}';
+    if (id === undefined || id === null)
+      throw new globalThis.Error("The parameter 'id' must be defined.");
+    url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: AxiosRequestConfig = {
+      method: 'GET',
+      url: url_,
+      headers: {
+        Accept: 'application/json',
+      },
+      signal,
+    };
+
+    return this.instance
+      .request(options_)
+      .catch((_error: any) => {
+        if (isAxiosError(_error) && _error.response) {
+          return _error.response;
+        } else {
+          throw _error;
+        }
+      })
+      .then((_response: AxiosResponse) => {
+        return this.processGetFact(_response);
+      });
+  }
+
+  protected processGetFact(response: AxiosResponse): Promise<SwaggerResponse<FactDto>> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && typeof response.headers === 'object') {
+      for (const k in response.headers) {
+        if (response.headers.hasOwnProperty(k)) {
+          _headers[k] = response.headers[k];
+        }
+      }
+    }
+    if (status === 200) {
+      const _responseText = response.data;
+      let result200: any = null;
+      let resultData200 = _responseText;
+      result200 = FactDto.fromJS(resultData200);
+      return Promise.resolve<SwaggerResponse<FactDto>>(
+        new SwaggerResponse<FactDto>(status, _headers, result200),
+      );
+    } else if (status === 404) {
+      const _responseText = response.data;
+      let result404: any = null;
+      let resultData404 = _responseText;
+      result404 = ProblemDetails.fromJS(resultData404);
+      return throwException(
+        'The specified resource was not found',
+        status,
+        _responseText,
+        _headers,
+        result404,
+      );
+    } else if (status !== 200 && status !== 204) {
+      const _responseText = response.data;
+      return throwException(
+        'An unexpected server error occurred.',
+        status,
+        _responseText,
+        _headers,
+      );
+    }
+    return Promise.resolve<SwaggerResponse<FactDto>>(
+      new SwaggerResponse(status, _headers, null as any),
+    );
+  }
+
+  /**
+   * Update a fact.
+   * @param id Character identifier
+   * @param if_Match The ETag version to match, as an unsigned 16-bit integer (1..65535), optionally quoted.
+   * @return No Content
+   */
+  updateFact(
+    id: string,
+    if_Match: string,
+    body: UpdateFactDto,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<void>> {
+    let url_ = this.baseUrl + '/v1/facts/{id}';
+    if (id === undefined || id === null)
+      throw new globalThis.Error("The parameter 'id' must be defined.");
+    url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    url_ = url_.replace(/[?&]$/, '');
+
+    const content_ = JSON.stringify(body);
+
+    let options_: AxiosRequestConfig = {
+      data: content_,
+      method: 'PUT',
+      url: url_,
+      headers: {
+        'If-Match': if_Match !== undefined && if_Match !== null ? '' + if_Match : '',
+        'Content-Type': 'application/json',
+      },
+      signal,
+    };
+
+    return this.instance
+      .request(options_)
+      .catch((_error: any) => {
+        if (isAxiosError(_error) && _error.response) {
+          return _error.response;
+        } else {
+          throw _error;
+        }
+      })
+      .then((_response: AxiosResponse) => {
+        return this.processUpdateFact(_response);
+      });
+  }
+
+  protected processUpdateFact(response: AxiosResponse): Promise<SwaggerResponse<void>> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && typeof response.headers === 'object') {
+      for (const k in response.headers) {
+        if (response.headers.hasOwnProperty(k)) {
+          _headers[k] = response.headers[k];
+        }
+      }
+    }
+    if (status === 204) {
+      const _responseText = response.data;
+      return Promise.resolve<SwaggerResponse<void>>(
+        new SwaggerResponse<void>(status, _headers, null as any),
+      );
+    } else if (status === 400) {
+      const _responseText = response.data;
+      let result400: any = null;
+      let resultData400 = _responseText;
+      result400 = ProblemDetails.fromJS(resultData400);
+      return throwException('Bad Request', status, _responseText, _headers, result400);
+    } else if (status === 404) {
+      const _responseText = response.data;
+      let result404: any = null;
+      let resultData404 = _responseText;
+      result404 = ProblemDetails.fromJS(resultData404);
+      return throwException(
+        'The specified resource was not found',
+        status,
+        _responseText,
+        _headers,
+        result404,
+      );
+    } else if (status === 412) {
+      const _responseText = response.data;
+      let result412: any = null;
+      let resultData412 = _responseText;
+      result412 = ProblemDetails.fromJS(resultData412);
+      return throwException('Precondition Failed', status, _responseText, _headers, result412);
+    } else if (status !== 200 && status !== 204) {
+      const _responseText = response.data;
+      return throwException(
+        'An unexpected server error occurred.',
+        status,
+        _responseText,
+        _headers,
+      );
+    }
+    return Promise.resolve<SwaggerResponse<void>>(
+      new SwaggerResponse(status, _headers, null as any),
+    );
+  }
+
+  /**
+   * Delete a fact by id.
+   * @param id Character identifier
+   * @return No Content
+   */
+  deleteFact(id: string, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
+    let url_ = this.baseUrl + '/v1/facts/{id}';
+    if (id === undefined || id === null)
+      throw new globalThis.Error("The parameter 'id' must be defined.");
+    url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: AxiosRequestConfig = {
+      method: 'DELETE',
+      url: url_,
+      headers: {},
+      signal,
+    };
+
+    return this.instance
+      .request(options_)
+      .catch((_error: any) => {
+        if (isAxiosError(_error) && _error.response) {
+          return _error.response;
+        } else {
+          throw _error;
+        }
+      })
+      .then((_response: AxiosResponse) => {
+        return this.processDeleteFact(_response);
+      });
+  }
+
+  protected processDeleteFact(response: AxiosResponse): Promise<SwaggerResponse<void>> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && typeof response.headers === 'object') {
+      for (const k in response.headers) {
+        if (response.headers.hasOwnProperty(k)) {
+          _headers[k] = response.headers[k];
+        }
+      }
+    }
+    if (status === 204) {
+      const _responseText = response.data;
+      return Promise.resolve<SwaggerResponse<void>>(
+        new SwaggerResponse<void>(status, _headers, null as any),
+      );
+    } else if (status === 404) {
+      const _responseText = response.data;
+      let result404: any = null;
+      let resultData404 = _responseText;
+      result404 = ProblemDetails.fromJS(resultData404);
+      return throwException(
+        'The specified resource was not found',
+        status,
+        _responseText,
+        _headers,
+        result404,
+      );
+    } else if (status !== 200 && status !== 204) {
+      const _responseText = response.data;
+      return throwException(
+        'An unexpected server error occurred.',
+        status,
+        _responseText,
+        _headers,
+      );
+    }
+    return Promise.resolve<SwaggerResponse<void>>(
+      new SwaggerResponse(status, _headers, null as any),
+    );
+  }
+
+  /**
+   * Connect an existing fact to an existing character.
+   * @param characterId Character identifier
+   * @param factId Fact identifier
+   * @return No Content
+   */
+  connectFactToCharacter(
+    characterId: string,
+    factId: string,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<void>> {
+    let url_ = this.baseUrl + '/v1/characters/{characterId}/facts/{factId}';
+    if (characterId === undefined || characterId === null)
+      throw new globalThis.Error("The parameter 'characterId' must be defined.");
+    url_ = url_.replace('{characterId}', encodeURIComponent('' + characterId));
+    if (factId === undefined || factId === null)
+      throw new globalThis.Error("The parameter 'factId' must be defined.");
+    url_ = url_.replace('{factId}', encodeURIComponent('' + factId));
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: AxiosRequestConfig = {
+      method: 'PUT',
+      url: url_,
+      headers: {},
+      signal,
+    };
+
+    return this.instance
+      .request(options_)
+      .catch((_error: any) => {
+        if (isAxiosError(_error) && _error.response) {
+          return _error.response;
+        } else {
+          throw _error;
+        }
+      })
+      .then((_response: AxiosResponse) => {
+        return this.processConnectFactToCharacter(_response);
+      });
+  }
+
+  protected processConnectFactToCharacter(response: AxiosResponse): Promise<SwaggerResponse<void>> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && typeof response.headers === 'object') {
+      for (const k in response.headers) {
+        if (response.headers.hasOwnProperty(k)) {
+          _headers[k] = response.headers[k];
+        }
+      }
+    }
+    if (status === 204) {
+      const _responseText = response.data;
+      return Promise.resolve<SwaggerResponse<void>>(
+        new SwaggerResponse<void>(status, _headers, null as any),
+      );
+    } else if (status === 404) {
+      const _responseText = response.data;
+      let result404: any = null;
+      let resultData404 = _responseText;
+      result404 = ProblemDetails.fromJS(resultData404);
+      return throwException(
+        'The specified resource was not found',
+        status,
+        _responseText,
+        _headers,
+        result404,
+      );
+    } else if (status === 409) {
+      const _responseText = response.data;
+      let result409: any = null;
+      let resultData409 = _responseText;
+      result409 = ProblemDetails.fromJS(resultData409);
+      return throwException(
+        'The request conflicts with the current state of the resource',
+        status,
+        _responseText,
+        _headers,
+        result409,
+      );
+    } else if (status !== 200 && status !== 204) {
+      const _responseText = response.data;
+      return throwException(
+        'An unexpected server error occurred.',
+        status,
+        _responseText,
+        _headers,
+      );
+    }
+    return Promise.resolve<SwaggerResponse<void>>(
+      new SwaggerResponse(status, _headers, null as any),
+    );
+  }
+
+  /**
+   * Delete the connection between a character and a fact.
+   * @param characterId Character identifier
+   * @param factId Fact identifier
+   * @return No Content
+   */
+  disconnectFactFromCharacter(
+    characterId: string,
+    factId: string,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<void>> {
+    let url_ = this.baseUrl + '/v1/characters/{characterId}/facts/{factId}';
+    if (characterId === undefined || characterId === null)
+      throw new globalThis.Error("The parameter 'characterId' must be defined.");
+    url_ = url_.replace('{characterId}', encodeURIComponent('' + characterId));
+    if (factId === undefined || factId === null)
+      throw new globalThis.Error("The parameter 'factId' must be defined.");
+    url_ = url_.replace('{factId}', encodeURIComponent('' + factId));
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: AxiosRequestConfig = {
+      method: 'DELETE',
+      url: url_,
+      headers: {},
+      signal,
+    };
+
+    return this.instance
+      .request(options_)
+      .catch((_error: any) => {
+        if (isAxiosError(_error) && _error.response) {
+          return _error.response;
+        } else {
+          throw _error;
+        }
+      })
+      .then((_response: AxiosResponse) => {
+        return this.processDisconnectFactFromCharacter(_response);
+      });
+  }
+
+  protected processDisconnectFactFromCharacter(
+    response: AxiosResponse,
+  ): Promise<SwaggerResponse<void>> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && typeof response.headers === 'object') {
+      for (const k in response.headers) {
+        if (response.headers.hasOwnProperty(k)) {
+          _headers[k] = response.headers[k];
+        }
+      }
+    }
+    if (status === 204) {
+      const _responseText = response.data;
+      return Promise.resolve<SwaggerResponse<void>>(
+        new SwaggerResponse<void>(status, _headers, null as any),
+      );
+    } else if (status === 404) {
+      const _responseText = response.data;
+      let result404: any = null;
+      let resultData404 = _responseText;
+      result404 = ProblemDetails.fromJS(resultData404);
+      return throwException(
+        'The specified resource was not found',
+        status,
+        _responseText,
+        _headers,
+        result404,
+      );
+    } else if (status !== 200 && status !== 204) {
+      const _responseText = response.data;
+      return throwException(
+        'An unexpected server error occurred.',
+        status,
+        _responseText,
+        _headers,
+      );
+    }
+    return Promise.resolve<SwaggerResponse<void>>(
+      new SwaggerResponse(status, _headers, null as any),
+    );
+  }
 }
 
 export class ProblemDetails implements IProblemDetails {
@@ -1122,6 +1701,8 @@ export class CharacterPayloadWithRelations implements ICharacterPayloadWithRelat
   id!: string;
   name!: string;
   knowCharacters!: KnowCharacterRelationPayload[];
+  /** Facts connected to the character via HAS_FACT */
+  facts!: CharacterFactPayload[];
 
   [key: string]: any;
 
@@ -1133,6 +1714,7 @@ export class CharacterPayloadWithRelations implements ICharacterPayloadWithRelat
     }
     if (!data) {
       this.knowCharacters = [];
+      this.facts = [];
     }
   }
 
@@ -1147,6 +1729,10 @@ export class CharacterPayloadWithRelations implements ICharacterPayloadWithRelat
         this.knowCharacters = [] as any;
         for (let item of _data['knowCharacters'])
           this.knowCharacters!.push(KnowCharacterRelationPayload.fromJS(item));
+      }
+      if (Array.isArray(_data['facts'])) {
+        this.facts = [] as any;
+        for (let item of _data['facts']) this.facts!.push(CharacterFactPayload.fromJS(item));
       }
     }
   }
@@ -1170,6 +1756,10 @@ export class CharacterPayloadWithRelations implements ICharacterPayloadWithRelat
       for (let item of this.knowCharacters)
         data['knowCharacters'].push(item ? item.toJSON() : (undefined as any));
     }
+    if (Array.isArray(this.facts)) {
+      data['facts'] = [];
+      for (let item of this.facts) data['facts'].push(item ? item.toJSON() : (undefined as any));
+    }
     return data;
   }
 }
@@ -1178,6 +1768,61 @@ export interface ICharacterPayloadWithRelations {
   id: string;
   name: string;
   knowCharacters: KnowCharacterRelationPayload[];
+  /** Facts connected to the character via HAS_FACT */
+  facts: CharacterFactPayload[];
+
+  [key: string]: any;
+}
+
+export class CharacterFactPayload implements ICharacterFactPayload {
+  id!: string;
+  title!: string;
+  content!: string;
+
+  [key: string]: any;
+
+  constructor(data?: ICharacterFactPayload) {
+    if (data) {
+      for (var property in data) {
+        if (data.hasOwnProperty(property)) (this as any)[property] = (data as any)[property];
+      }
+    }
+  }
+
+  init(_data?: any) {
+    if (_data) {
+      for (var property in _data) {
+        if (_data.hasOwnProperty(property)) this[property] = _data[property];
+      }
+      this.id = _data['id'];
+      this.title = _data['title'];
+      this.content = _data['content'];
+    }
+  }
+
+  static fromJS(data: any): CharacterFactPayload {
+    data = typeof data === 'object' ? data : {};
+    let result = new CharacterFactPayload();
+    result.init(data);
+    return result;
+  }
+
+  toJSON(data?: any) {
+    data = typeof data === 'object' ? data : {};
+    for (var property in this) {
+      if (this.hasOwnProperty(property)) data[property] = this[property];
+    }
+    data['id'] = this.id;
+    data['title'] = this.title;
+    data['content'] = this.content;
+    return data;
+  }
+}
+
+export interface ICharacterFactPayload {
+  id: string;
+  title: string;
+  content: string;
 
   [key: string]: any;
 }
@@ -1548,6 +2193,157 @@ export class UpdateKnowsDto implements IUpdateKnowsDto {
 export interface IUpdateKnowsDto {
   description: string;
   isStrongRelation: boolean;
+
+  [key: string]: any;
+}
+
+export class CreateFactDto implements ICreateFactDto {
+  title!: string;
+  content!: string;
+
+  [key: string]: any;
+
+  constructor(data?: ICreateFactDto) {
+    if (data) {
+      for (var property in data) {
+        if (data.hasOwnProperty(property)) (this as any)[property] = (data as any)[property];
+      }
+    }
+  }
+
+  init(_data?: any) {
+    if (_data) {
+      for (var property in _data) {
+        if (_data.hasOwnProperty(property)) this[property] = _data[property];
+      }
+      this.title = _data['title'];
+      this.content = _data['content'];
+    }
+  }
+
+  static fromJS(data: any): CreateFactDto {
+    data = typeof data === 'object' ? data : {};
+    let result = new CreateFactDto();
+    result.init(data);
+    return result;
+  }
+
+  toJSON(data?: any) {
+    data = typeof data === 'object' ? data : {};
+    for (var property in this) {
+      if (this.hasOwnProperty(property)) data[property] = this[property];
+    }
+    data['title'] = this.title;
+    data['content'] = this.content;
+    return data;
+  }
+}
+
+export interface ICreateFactDto {
+  title: string;
+  content: string;
+
+  [key: string]: any;
+}
+
+export class UpdateFactDto implements IUpdateFactDto {
+  title!: string;
+  content!: string;
+
+  [key: string]: any;
+
+  constructor(data?: IUpdateFactDto) {
+    if (data) {
+      for (var property in data) {
+        if (data.hasOwnProperty(property)) (this as any)[property] = (data as any)[property];
+      }
+    }
+  }
+
+  init(_data?: any) {
+    if (_data) {
+      for (var property in _data) {
+        if (_data.hasOwnProperty(property)) this[property] = _data[property];
+      }
+      this.title = _data['title'];
+      this.content = _data['content'];
+    }
+  }
+
+  static fromJS(data: any): UpdateFactDto {
+    data = typeof data === 'object' ? data : {};
+    let result = new UpdateFactDto();
+    result.init(data);
+    return result;
+  }
+
+  toJSON(data?: any) {
+    data = typeof data === 'object' ? data : {};
+    for (var property in this) {
+      if (this.hasOwnProperty(property)) data[property] = this[property];
+    }
+    data['title'] = this.title;
+    data['content'] = this.content;
+    return data;
+  }
+}
+
+export interface IUpdateFactDto {
+  title: string;
+  content: string;
+
+  [key: string]: any;
+}
+
+export class FactDto implements IFactDto {
+  id!: string;
+  title!: string;
+  content!: string;
+
+  [key: string]: any;
+
+  constructor(data?: IFactDto) {
+    if (data) {
+      for (var property in data) {
+        if (data.hasOwnProperty(property)) (this as any)[property] = (data as any)[property];
+      }
+    }
+  }
+
+  init(_data?: any) {
+    if (_data) {
+      for (var property in _data) {
+        if (_data.hasOwnProperty(property)) this[property] = _data[property];
+      }
+      this.id = _data['id'];
+      this.title = _data['title'];
+      this.content = _data['content'];
+    }
+  }
+
+  static fromJS(data: any): FactDto {
+    data = typeof data === 'object' ? data : {};
+    let result = new FactDto();
+    result.init(data);
+    return result;
+  }
+
+  toJSON(data?: any) {
+    data = typeof data === 'object' ? data : {};
+    for (var property in this) {
+      if (this.hasOwnProperty(property)) data[property] = this[property];
+    }
+    data['id'] = this.id;
+    data['title'] = this.title;
+    data['content'] = this.content;
+    return data;
+  }
+}
+
+export interface IFactDto {
+  id: string;
+  title: string;
+  content: string;
 
   [key: string]: any;
 }
