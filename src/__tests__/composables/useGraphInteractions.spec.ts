@@ -66,51 +66,79 @@ describe('useGraphInteractions — fact tooltip and details', () => {
     expect(tooltip.hideFactTooltip).toHaveBeenCalledTimes(1);
   });
 
-  it('left-clicking a fact node selects it, hides the tooltip and opens the details', () => {
+  it('single-clicking a fact node only selects it — no details window', () => {
     const tooltip = makeTooltip();
     const selection = makeSelection();
-    const onFactNodeClicked = vi.fn();
+    const onFactNodeDoubleClicked = vi.fn();
     const { eventHandlers } = useGraphInteractions(selection, makeMenus(tooltip), {
-      onFactNodeClicked,
+      onFactNodeDoubleClicked,
     });
 
     eventHandlers['node:click']!(clickEvent('fact-1'));
 
     expect(selection.selectedFactNodeId.value).toBe('fact-1');
-    expect(tooltip.hideFactTooltip).toHaveBeenCalledTimes(1);
-    expect(onFactNodeClicked).toHaveBeenCalledWith('fact-1');
+    expect(onFactNodeDoubleClicked).not.toHaveBeenCalled();
   });
 
-  it('left-clicking an edge selects it and asks for the relation details', () => {
+  it('double-clicking a fact node hides the tooltip and opens the details', () => {
+    const tooltip = makeTooltip();
     const selection = makeSelection();
-    const onKnowEdgeClicked = vi.fn();
-    const { eventHandlers } = useGraphInteractions(selection, makeMenus(makeTooltip()), {
-      onKnowEdgeClicked,
+    const onFactNodeDoubleClicked = vi.fn();
+    const { eventHandlers } = useGraphInteractions(selection, makeMenus(tooltip), {
+      onFactNodeDoubleClicked,
     });
-    const edgeEvent = {
+
+    eventHandlers['node:dblclick']!(clickEvent('fact-1'));
+
+    expect(selection.selectedFactNodeId.value).toBe('fact-1');
+    expect(tooltip.hideFactTooltip).toHaveBeenCalledTimes(1);
+    expect(onFactNodeDoubleClicked).toHaveBeenCalledWith('fact-1');
+  });
+
+  it('double-clicking a character node does not open the fact details', () => {
+    const selection = makeSelection();
+    const onFactNodeDoubleClicked = vi.fn();
+    const { eventHandlers } = useGraphInteractions(selection, makeMenus(makeTooltip()), {
+      onFactNodeDoubleClicked,
+    });
+
+    eventHandlers['node:dblclick']!(clickEvent('character-1'));
+
+    expect(onFactNodeDoubleClicked).not.toHaveBeenCalled();
+  });
+
+  function makeEdgeEvent(type: string): EdgeEvent<MouseEvent> {
+    return {
       edge: 'char-1@char-2',
       edges: ['char-1@char-2'],
       summarized: false,
-      event: new MouseEvent('click'),
+      event: new MouseEvent(type),
     } as EdgeEvent<MouseEvent>;
+  }
 
-    eventHandlers['edge:click']!(edgeEvent);
-
-    expect(selection.selectedEdgeId.value).toBe('char-1@char-2');
-    expect(onKnowEdgeClicked).toHaveBeenCalledWith('char-1@char-2');
-  });
-
-  it('left-clicking a character node does not open the fact details', () => {
-    const tooltip = makeTooltip();
+  it('single-clicking an edge only selects it — no details window', () => {
     const selection = makeSelection();
-    const onFactNodeClicked = vi.fn();
-    const { eventHandlers } = useGraphInteractions(selection, makeMenus(tooltip), {
-      onFactNodeClicked,
+    const onKnowEdgeDoubleClicked = vi.fn();
+    const { eventHandlers } = useGraphInteractions(selection, makeMenus(makeTooltip()), {
+      onKnowEdgeDoubleClicked,
     });
 
-    eventHandlers['node:click']!(clickEvent('character-1'));
+    eventHandlers['edge:click']!(makeEdgeEvent('click'));
 
-    expect(selection.firstSelectedNodeId.value).toBe('character-1');
-    expect(onFactNodeClicked).not.toHaveBeenCalled();
+    expect(selection.selectedEdgeId.value).toBe('char-1@char-2');
+    expect(onKnowEdgeDoubleClicked).not.toHaveBeenCalled();
+  });
+
+  it('double-clicking an edge selects it and asks for the relation details', () => {
+    const selection = makeSelection();
+    const onKnowEdgeDoubleClicked = vi.fn();
+    const { eventHandlers } = useGraphInteractions(selection, makeMenus(makeTooltip()), {
+      onKnowEdgeDoubleClicked,
+    });
+
+    eventHandlers['edge:dblclick']!(makeEdgeEvent('dblclick'));
+
+    expect(selection.selectedEdgeId.value).toBe('char-1@char-2');
+    expect(onKnowEdgeDoubleClicked).toHaveBeenCalledWith('char-1@char-2');
   });
 });

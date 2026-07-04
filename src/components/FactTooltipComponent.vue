@@ -75,7 +75,7 @@ defineExpose({
 
 .fact-tooltip-content {
   /* Long fact content is clamped here; the full text lives in the details
-     window opened by clicking the node. */
+     window opened by double-clicking the node. */
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 6;

@@ -31,13 +31,13 @@ export interface GraphMenus {
 }
 
 export interface UseGraphInteractionsOptions {
-  /** Called when a fact node is left-clicked (App.vue opens the details window). */
-  onFactNodeClicked?: (factId: string) => void;
+  /** Called when a fact node is double-clicked (App.vue opens the details window). */
+  onFactNodeDoubleClicked?: (factId: string) => void;
   /**
-   * Called when any edge is left-clicked (App.vue opens the relation details
+   * Called when any edge is double-clicked (App.vue opens the relation details
    * window; its guard skips edge ids without a know relation, i.e. fact edges).
    */
-  onKnowEdgeClicked?: (edgeId: string) => void;
+  onKnowEdgeDoubleClicked?: (edgeId: string) => void;
 }
 
 /**
@@ -63,13 +63,26 @@ export function useGraphInteractions(
     selection.suppressNextViewClickClear.value = true;
     if (selection.isFactNodeId(nodeEvents.node)) {
       selection.selectedFactNodeId.value = nodeEvents.node;
-      // The details window replaces the tooltip; don't leave it hanging under
-      // the modal.
-      menus.factTooltip.value?.hideFactTooltip();
-      options.onFactNodeClicked?.(nodeEvents.node);
       return;
     }
     selection.firstSelectedNodeId.value = nodeEvents.node;
+  }
+
+  // Single click is selection only; details windows open on double click so
+  // selecting a node/edge never throws a modal in the user's face.
+  function nodeDoubleClickHandler(nodeEvents: NodeEvent<MouseEvent>) {
+    if (!selection.isFactNodeId(nodeEvents.node)) return;
+    selection.selectedFactNodeId.value = nodeEvents.node;
+    // The details window replaces the tooltip; don't leave it hanging under
+    // the modal.
+    menus.factTooltip.value?.hideFactTooltip();
+    options.onFactNodeDoubleClicked?.(nodeEvents.node);
+  }
+
+  function edgeDoubleClickHandler(edgeEvent: EdgeEvent<MouseEvent>) {
+    if (!edgeEvent.edge) return;
+    selection.selectedEdgeId.value = edgeEvent.edge;
+    options.onKnowEdgeDoubleClicked?.(edgeEvent.edge);
   }
 
   function nodePointerOverHandler(params: NodeEvent<PointerEvent>) {
@@ -85,9 +98,6 @@ export function useGraphInteractions(
   function edgeClickHandler(edgeEvent: EdgeEvent<MouseEvent>) {
     selection.suppressNextViewClickClear.value = true;
     selection.selectedEdgeId.value = edgeEvent.edge;
-    if (edgeEvent.edge) {
-      options.onKnowEdgeClicked?.(edgeEvent.edge);
-    }
   }
 
   function viewClickHandler() {
@@ -146,6 +156,8 @@ export function useGraphInteractions(
     'node:click': nodeClickHandler,
     'edge:click': edgeClickHandler,
     'view:click': viewClickHandler,
+    'node:dblclick': nodeDoubleClickHandler,
+    'edge:dblclick': edgeDoubleClickHandler,
     'node:contextmenu': showNodeContextMenu,
     'edge:contextmenu': showEdgeContextMenu,
     'view:contextmenu': showViewContextMenu,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * Read-only window showing a fact's title and full content. Opened by
- * left-clicking a fact node in the graph; `v-model:open` controls visibility.
+ * double-clicking a fact node in the graph; `v-model:open` controls visibility.
  */
 import type { Fact } from '@/services/Models/Fact';
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * Read-only window showing a know-relation's full description (edge labels in
- * the graph are truncated). Opened by left-clicking a relation edge;
+ * the graph are truncated). Opened by double-clicking a relation edge;
  * `v-model:open` controls visibility.
  */
 import { computed } from 'vue';

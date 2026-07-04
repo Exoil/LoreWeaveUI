@@ -72,7 +72,10 @@ const { eventHandlers } = useGraphInteractions(
     view: viewMenuRef,
     factTooltip: factTooltipRef,
   },
-  { onFactNodeClicked: openFactDetailsDialog, onKnowEdgeClicked: openKnowEdgeDetailsDialog },
+  {
+    onFactNodeDoubleClicked: openFactDetailsDialog,
+    onKnowEdgeDoubleClicked: openKnowEdgeDetailsDialog,
+  },
 );
 
 // Pull the refs/handlers the template uses out of the composables. Top-level
@@ -176,7 +179,7 @@ function openConnectFactDialog() {
   connectFactDialogOpen.value = true;
 }
 
-// Read-only fact window, opened by left-clicking a fact node (the interaction
+// Read-only fact window, opened by double-clicking a fact node (the interaction
 // handler passes the clicked id; the selection is already set at that point).
 const factDetailsDialogOpen = ref(false);
 const selectedFact = computed(() =>
@@ -187,7 +190,7 @@ function openFactDetailsDialog(factId: string) {
   factDetailsDialogOpen.value = true;
 }
 
-// Read-only relation window, opened by left-clicking a know edge. Fact edges
+// Read-only relation window, opened by double-clicking a know edge. Fact edges
 // have no know relation behind them, so the guard leaves the dialog closed.
 const knowEdgeDetailsDialogOpen = ref(false);
 const selectedKnowEdge = computed(() =>
