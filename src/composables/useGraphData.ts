@@ -49,6 +49,17 @@ export function useGraphData(selection: GraphSelection) {
     return factNodeList.value.find((f) => f.id === id)?.factData;
   }
 
+  /** The know-relation edge behind a graph edge id, or `undefined` (e.g. fact edges). */
+  function getKnowEdgeById(edgeId: string): KnowEdge | undefined {
+    const [source, target] = edgeId.split(EDGE_ID_SEPARATOR);
+    return edges.value.find((e) => e.source === source && e.target === target);
+  }
+
+  /** A character's display name by node id, or `undefined` for unknown/fact ids. */
+  function getCharacterNameById(id: string): string | undefined {
+    return nodeList.value.find((n) => n.id === id)?.name;
+  }
+
   // Ids of the characters on the currently highlighted relation path (the
   // result of "find path between A and B"), in order.
   const pathCharacterIds = ref<string[]>([]);
@@ -269,6 +280,8 @@ export function useGraphData(selection: GraphSelection) {
     edgesForGraph,
     isFactNode,
     getFactById,
+    getKnowEdgeById,
+    getCharacterNameById,
     loadData,
     onCharacterCreated,
     onCharacterDeleted,

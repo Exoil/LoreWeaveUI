@@ -78,7 +78,13 @@ export function useGraphConfiguration() {
     if (edge.isFactEdge) return FACT_EDGE_DASHARRAY;
     return edge.isStrong ? undefined : WEAK_EDGE_DASHARRAY;
   };
-  graphConfiguration.edge.type = 'straight';
+  // A mutual relation (A knows B and B knows A) is two directed edges between
+  // the same pair. Curved edges + a gap arc them away from each other so both
+  // lines and their description labels stay readable; summarize is off so the
+  // pair is never collapsed into a single counted line.
+  graphConfiguration.edge.type = 'curve';
+  graphConfiguration.edge.gap = 24;
+  graphConfiguration.edge.summarize = false;
   graphConfiguration.edge.marker.source.type = 'none';
   graphConfiguration.edge.marker.target.type = 'arrow';
   graphConfiguration.view.grid.visible = true;

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ref } from 'vue';
-import type { NodeEvent } from 'v-network-graph';
+import type { EdgeEvent, NodeEvent } from 'v-network-graph';
 import {
   useGraphInteractions,
   type FactTooltipApi,
@@ -79,6 +79,25 @@ describe('useGraphInteractions — fact tooltip and details', () => {
     expect(selection.selectedFactNodeId.value).toBe('fact-1');
     expect(tooltip.hideFactTooltip).toHaveBeenCalledTimes(1);
     expect(onFactNodeClicked).toHaveBeenCalledWith('fact-1');
+  });
+
+  it('left-clicking an edge selects it and asks for the relation details', () => {
+    const selection = makeSelection();
+    const onKnowEdgeClicked = vi.fn();
+    const { eventHandlers } = useGraphInteractions(selection, makeMenus(makeTooltip()), {
+      onKnowEdgeClicked,
+    });
+    const edgeEvent = {
+      edge: 'char-1@char-2',
+      edges: ['char-1@char-2'],
+      summarized: false,
+      event: new MouseEvent('click'),
+    } as EdgeEvent<MouseEvent>;
+
+    eventHandlers['edge:click']!(edgeEvent);
+
+    expect(selection.selectedEdgeId.value).toBe('char-1@char-2');
+    expect(onKnowEdgeClicked).toHaveBeenCalledWith('char-1@char-2');
   });
 
   it('left-clicking a character node does not open the fact details', () => {

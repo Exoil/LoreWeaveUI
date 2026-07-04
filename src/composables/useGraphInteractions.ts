@@ -33,6 +33,11 @@ export interface GraphMenus {
 export interface UseGraphInteractionsOptions {
   /** Called when a fact node is left-clicked (App.vue opens the details window). */
   onFactNodeClicked?: (factId: string) => void;
+  /**
+   * Called when any edge is left-clicked (App.vue opens the relation details
+   * window; its guard skips edge ids without a know relation, i.e. fact edges).
+   */
+  onKnowEdgeClicked?: (edgeId: string) => void;
 }
 
 /**
@@ -80,6 +85,9 @@ export function useGraphInteractions(
   function edgeClickHandler(edgeEvent: EdgeEvent<MouseEvent>) {
     selection.suppressNextViewClickClear.value = true;
     selection.selectedEdgeId.value = edgeEvent.edge;
+    if (edgeEvent.edge) {
+      options.onKnowEdgeClicked?.(edgeEvent.edge);
+    }
   }
 
   function viewClickHandler() {

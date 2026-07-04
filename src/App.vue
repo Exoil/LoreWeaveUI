@@ -25,6 +25,7 @@ import UpdateFactComponent from '@/components/UpdateFactComponent.vue';
 import FindPathToCharacterComponent from '@/components/FindPathToCharacterComponent.vue';
 import FactTooltipComponent from '@/components/FactTooltipComponent.vue';
 import FactDetailsComponent from '@/components/FactDetailsComponent.vue';
+import KnowEdgeDetailsComponent from '@/components/KnowEdgeDetailsComponent.vue';
 import { useGraphConfiguration } from '@/composables/useGraphConfiguration';
 import { useGraphSelection, EDGE_ID_SEPARATOR } from '@/composables/useGraphSelection';
 import { useGraphData } from '@/composables/useGraphData';
@@ -70,7 +71,7 @@ const { eventHandlers } = useGraphInteractions(
     view: viewMenuRef,
     factTooltip: factTooltipRef,
   },
-  { onFactNodeClicked: openFactDetailsDialog },
+  { onFactNodeClicked: openFactDetailsDialog, onKnowEdgeClicked: openKnowEdgeDetailsDialog },
 );
 
 // Pull the refs/handlers the template uses out of the composables. Top-level
@@ -171,6 +172,27 @@ const selectedFact = computed(() =>
 function openFactDetailsDialog(factId: string) {
   if (!graph.getFactById(factId)) return;
   factDetailsDialogOpen.value = true;
+}
+
+// Read-only relation window, opened by left-clicking a know edge. Fact edges
+// have no know relation behind them, so the guard leaves the dialog closed.
+const knowEdgeDetailsDialogOpen = ref(false);
+const selectedKnowEdge = computed(() =>
+  selectedEdgeId.value ? (graph.getKnowEdgeById(selectedEdgeId.value) ?? null) : null,
+);
+const selectedKnowEdgeFromName = computed(() =>
+  selectedKnowEdge.value
+    ? (graph.getCharacterNameById(selectedKnowEdge.value.source) ?? null)
+    : null,
+);
+const selectedKnowEdgeToName = computed(() =>
+  selectedKnowEdge.value
+    ? (graph.getCharacterNameById(selectedKnowEdge.value.target) ?? null)
+    : null,
+);
+function openKnowEdgeDetailsDialog(edgeId: string) {
+  if (!graph.getKnowEdgeById(edgeId)) return;
+  knowEdgeDetailsDialogOpen.value = true;
 }
 </script>
 
@@ -279,6 +301,13 @@ function openFactDetailsDialog(factId: string) {
     <FactTooltipComponent ref="factTooltipRef" :getFactById="graph.getFactById" />
 
     <FactDetailsComponent v-model:open="factDetailsDialogOpen" :fact="selectedFact" />
+
+    <KnowEdgeDetailsComponent
+      v-model:open="knowEdgeDetailsDialogOpen"
+      :edge="selectedKnowEdge"
+      :fromCharacterName="selectedKnowEdgeFromName"
+      :toCharacterName="selectedKnowEdgeToName"
+    />
 
     <NotificationListComponent :notificationService="notificationService" />
 
