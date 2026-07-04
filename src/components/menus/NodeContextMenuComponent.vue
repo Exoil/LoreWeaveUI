@@ -23,6 +23,7 @@ const emit = defineEmits<{
   openUpdateCharacterDialog: [];
   openFindPathDialog: [];
   openCreateKnowEdgeDialog: [];
+  openCreateFactDialog: [];
   deletedCharacterFromMenu: [deletedCharacterId: string];
 }>();
 
@@ -46,6 +47,12 @@ function onCharacterDeleted(deletedCharacterId: string) {
 function onCreateKnowEdgeClick() {
   if (!props.firstSelectedCharacterId || !props.secondSelectedCharacterId) return;
   emit('openCreateKnowEdgeDialog');
+  hideMenu();
+}
+
+function onCreateFactClick() {
+  if (!props.firstSelectedCharacterId) return;
+  emit('openCreateFactDialog');
   hideMenu();
 }
 
@@ -109,6 +116,16 @@ defineExpose({
             :disabled="!firstSelectedCharacterId || !secondSelectedCharacterId"
           >
             Create know edge
+          </button>
+
+          <button
+            id="node-context-create-fact-button"
+            class="dropdown-item"
+            type="button"
+            @click="onCreateFactClick"
+            :disabled="!firstSelectedCharacterId"
+          >
+            Create fact
           </button>
         </div>
       </div>

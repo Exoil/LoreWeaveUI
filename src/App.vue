@@ -6,17 +6,20 @@
  * This component just news up the API service, loads the initial data, holds the
  * modal open/close flags, and wires composables ↔ child components.
  */
-import { ref, onBeforeMount, onMounted, inject } from 'vue';
+import { ref, computed, onBeforeMount, onMounted, inject } from 'vue';
 import { API_BASE_URL_KEY } from '@/foundry/injection-keys';
 import { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { PageQuery } from '@/services/Models/PageQuery';
 import NodeContextMenuComponent from '@/components/menus/NodeContextMenuComponent.vue';
+import FactNodeContextMenuComponent from '@/components/menus/FactNodeContextMenuComponent.vue';
 import EdgeContextMenuComponent from '@/components/menus/EdgeContextMenuComponent.vue';
 import ViewContextMenuComponent from '@/components/menus/ViewContextMenuComponent.vue';
 import CreateCharacterComponent from '@/components/CreateCharacterComponent.vue';
 import CreateCharacterKnowEdgeComponent from '@/components/CreateCharacterKnowEdgeComponent.vue';
+import CreateFactComponent from '@/components/CreateFactComponent.vue';
 import UpdateCharacterComponent from '@/components/UpdateCharacterComponent.vue';
 import UpdateKnowEdgeComponent from '@/components/UpdateKnowEdgeComponent.vue';
+import UpdateFactComponent from '@/components/UpdateFactComponent.vue';
 import FindPathToCharacterComponent from '@/components/FindPathToCharacterComponent.vue';
 import { useGraphConfiguration } from '@/composables/useGraphConfiguration';
 import { useGraphSelection, EDGE_ID_SEPARATOR } from '@/composables/useGraphSelection';
@@ -24,6 +27,7 @@ import { useGraphData } from '@/composables/useGraphData';
 import {
   useGraphInteractions,
   type NodeContextMenuApi,
+  type FactNodeContextMenuApi,
   type EdgeContextMenuApi,
   type ViewContextMenuApi,
 } from '@/composables/useGraphInteractions';
@@ -38,15 +42,19 @@ let loreWeaveApiService: LoreWeaveApiService;
 
 // --- Graph styling, state and behaviour (see src/composables) -------------
 const { graphConfiguration } = useGraphConfiguration();
-const selection = useGraphSelection();
+// The predicate closes over `graph` (created just below) lazily — it only runs
+// on user interaction, long after both composables exist.
+const selection = useGraphSelection({ isFactNodeId: (id) => graph.isFactNode(id) });
 const graph = useGraphData(selection);
 
 // Context-menu component instances, opened by the interaction handlers.
 const nodeMenuRef = ref<NodeContextMenuApi | null>(null);
+const factMenuRef = ref<FactNodeContextMenuApi | null>(null);
 const edgeMenuRef = ref<EdgeContextMenuApi | null>(null);
 const viewMenuRef = ref<ViewContextMenuApi | null>(null);
 const { eventHandlers } = useGraphInteractions(selection, {
   node: nodeMenuRef,
+  factNode: factMenuRef,
   edge: edgeMenuRef,
   view: viewMenuRef,
 });
@@ -56,6 +64,7 @@ const { eventHandlers } = useGraphInteractions(selection, {
 const {
   firstSelectedNodeId,
   secondSelectedNodeId,
+  selectedFactNodeId,
   selectedEdgeId,
   selectedEdgeFromId,
   selectedEdgeToId,
@@ -72,9 +81,18 @@ const {
   onEdgeKnowCreated,
   onEdgeKnowDeleted,
   onKnowEdgeUpdated,
+  onFactCreated,
+  onFactUpdated,
+  onFactDeleted,
+  onFactEdgeDeleted,
   onPathFound,
   clearHighlightedPath,
 } = graph;
+
+// A fact edge points at a fact node; the edge menu shows different actions for it.
+const selectedEdgeIsFactEdge = computed<boolean>(() =>
+  selectedEdgeToId.value ? graph.isFactNode(selectedEdgeToId.value) : false,
+);
 
 onBeforeMount(() => {
   loreWeaveApiService = new LoreWeaveApiService(apiBaseUrl);
@@ -117,6 +135,18 @@ function openFindPathDialog() {
   if (!firstSelectedNodeId.value) return;
   findPathDialogOpen.value = true;
 }
+
+const createFactDialogOpen = ref(false);
+function openCreateFactDialog() {
+  if (!firstSelectedNodeId.value) return;
+  createFactDialogOpen.value = true;
+}
+
+const updateFactDialogOpen = ref(false);
+function openUpdateFactDialog() {
+  if (!selectedFactNodeId.value) return;
+  updateFactDialogOpen.value = true;
+}
 </script>
 
 <template>
@@ -149,15 +179,25 @@ function openFindPathDialog() {
       @openUpdateCharacterDialog="openUpdateDialog"
       @openFindPathDialog="openFindPathDialog"
       @openCreateKnowEdgeDialog="openCreateKnowEdgeDialog"
+      @openCreateFactDialog="openCreateFactDialog"
       @deletedCharacterFromMenu="onCharacterDeleted"
+    />
+    <FactNodeContextMenuComponent
+      ref="factMenuRef"
+      :loreWeaveApiService="loreWeaveApiService"
+      :selectedFactId="selectedFactNodeId"
+      @openUpdateFactDialog="openUpdateFactDialog"
+      @deletedFactFromMenu="onFactDeleted"
     />
     <EdgeContextMenuComponent
       ref="edgeMenuRef"
       :loreWeaveApiService="loreWeaveApiService"
       :selectedEdgeId="selectedEdgeId"
       :edgeIdSeparator="EDGE_ID_SEPARATOR"
+      :isFactEdge="selectedEdgeIsFactEdge"
       @openUpdateKnowEdgeDialog="openUpdateKnowEdgeDialog"
       @deleteKnowEdgeFromMenu="onEdgeKnowDeleted"
+      @deleteFactEdgeFromMenu="onFactEdgeDeleted"
     />
     <ViewContextMenuComponent ref="viewMenuRef" @openCreateCharacterDialog="openCreateDialog" />
 
@@ -195,6 +235,20 @@ function openFindPathDialog() {
       :loreWeaveApiService="loreWeaveApiService"
       :fromCharacterId="firstSelectedNodeId"
       @pathFound="onPathFound"
+    />
+
+    <CreateFactComponent
+      v-model:open="createFactDialogOpen"
+      :loreWeaveApiService="loreWeaveApiService"
+      :characterId="firstSelectedNodeId"
+      @factCreated="onFactCreated"
+    />
+
+    <UpdateFactComponent
+      v-model:open="updateFactDialogOpen"
+      :loreWeaveApiService="loreWeaveApiService"
+      :factId="selectedFactNodeId"
+      @updatedFact="onFactUpdated"
     />
 
     <button

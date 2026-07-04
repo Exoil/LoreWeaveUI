@@ -1,9 +1,11 @@
 import {
   type CharacterPayloadWithRelations,
   CreateCharacterDto,
+  CreateFactDto,
   CreateKnowsDto,
   LoreWeaveApiClient,
   UpdateCharacterDto,
+  UpdateFactDto,
   UpdateKnowsDto,
 } from './httpClients/LoreWeaveApiClient';
 import { VersionedCharacter } from './Models/VersionedCharacter';
@@ -14,6 +16,9 @@ import { KnowRelation } from '@/services/Models/KnowRelation.ts';
 import { VersionedKnowRelation } from '@/services/Models/VersionedKnowRelation.ts';
 import type { UpdateKnowRelation } from '@/services/Models/UpdateKnowRelation.ts';
 import { RelationPath } from '@/services/Models/RelationPath.ts';
+import { Fact } from '@/services/Models/Fact.ts';
+import { VersionedFact } from '@/services/Models/VersionedFact.ts';
+import type { UpdateFact } from '@/services/Models/UpdateFact.ts';
 
 /**
  * Friendly wrapper around the NSwag-generated {@link LoreWeaveApiClient} that the
@@ -30,13 +35,14 @@ export class LoreWeaveApiService {
     this._loreWeaveApiClient = new LoreWeaveApiClient(baseUrl);
   }
 
-  /** Map a generated character payload (+ its relations) to the domain {@link Character}. */
+  /** Map a generated character payload (+ its relations and facts) to the domain {@link Character}. */
   private static toCharacter(payload: CharacterPayloadWithRelations): Character {
     const relations = (payload.knowCharacters ?? []).map(
       (k) => new KnowRelation(k.characterId, k.description, k.isStrongRelation),
     );
+    const facts = (payload.facts ?? []).map((f) => new Fact(f.id, f.title, f.content));
 
-    return new Character(payload.id, payload.name, relations);
+    return new Character(payload.id, payload.name, relations, facts);
   }
 
   /**
@@ -192,6 +198,77 @@ export class LoreWeaveApiService {
     );
 
     return response.result.map((c) => LoreWeaveApiService.toCharacter(c));
+  }
+
+  /**
+   * Create a fact and connect it to the character `characterId`.
+   * @returns the new fact's id.
+   */
+  public async addFactToCharacterAsync(
+    characterId: string,
+    title: string,
+    content: string,
+    signal?: AbortSignal,
+  ): Promise<string> {
+    const createFact = new CreateFactDto({
+      title: title,
+      content: content,
+    });
+
+    const response = await this._loreWeaveApiClient.addFactToCharacter(
+      characterId,
+      createFact,
+      signal,
+    );
+
+    return response.result;
+  }
+
+  /**
+   * Fetch one fact by id, including its `version` (read from the ETag response
+   * header, not the body) for later concurrency-checked updates.
+   */
+  public async getFactAsync(id: string, signal?: AbortSignal): Promise<VersionedFact> {
+    const response = await this._loreWeaveApiClient.getFact(id, signal);
+    return new VersionedFact(
+      response.result.id,
+      response.result.title,
+      response.result.content,
+      response.headers['etag'],
+    );
+  }
+
+  /** Edit a fact's title/content; `update.version` (ETag) guards concurrent edits. */
+  public async updateFactAsync(update: UpdateFact, signal?: AbortSignal): Promise<void> {
+    const body = new UpdateFactDto({
+      title: update.title,
+      content: update.content,
+    });
+
+    await this._loreWeaveApiClient.updateFact(update.id, update.version, body, signal);
+  }
+
+  /** Delete a fact by id (also removes its connections on the backend). */
+  public async deleteFactAsync(id: string, signal?: AbortSignal): Promise<void> {
+    await this._loreWeaveApiClient.deleteFact(id, signal);
+  }
+
+  /** Connect an existing fact to an existing character (HAS_FACT). */
+  public async connectFactToCharacterAsync(
+    characterId: string,
+    factId: string,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    await this._loreWeaveApiClient.connectFactToCharacter(characterId, factId, signal);
+  }
+
+  /** Remove the HAS_FACT connection between a character and a fact (keeps the fact). */
+  public async disconnectFactFromCharacterAsync(
+    characterId: string,
+    factId: string,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    await this._loreWeaveApiClient.disconnectFactFromCharacter(characterId, factId, signal);
   }
 
   /**

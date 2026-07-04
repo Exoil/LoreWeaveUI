@@ -9,23 +9,37 @@ import { ref } from 'vue';
  */
 export const EDGE_ID_SEPARATOR = '_';
 
+export interface UseGraphSelectionOptions {
+  /**
+   * Tells the selection which node ids belong to fact nodes so they land in
+   * `selectedFactNodeId` instead of the character pair slots. Defaults to
+   * "no node is a fact".
+   */
+  isFactNodeId?: (id: string) => boolean;
+}
+
 /**
- * Owns which nodes (characters) and edge (relation) are currently selected in
- * the graph, plus the small amount of derived state the UI needs from that
- * selection.
+ * Owns which nodes (characters / facts) and edge (relation) are currently
+ * selected in the graph, plus the small amount of derived state the UI needs
+ * from that selection.
  *
  * Selection model:
- *  - Up to two nodes can be selected at once (`firstSelectedNodeId`,
+ *  - Up to two character nodes can be selected at once (`firstSelectedNodeId`,
  *    `secondSelectedNodeId`) — two are needed to create / inspect a relation.
+ *  - At most one fact node (`selectedFactNodeId`); fact ids are recognised via
+ *    the `isFactNodeId` option and never occupy the character slots.
  *  - At most one edge (`selectedEdgeId`).
  *
  * @returns selection refs, the v-network-graph `v-model` bindings
  *   (`selectedNodeIds` / `selectedEdgeIds`), the split edge endpoint ids, and a
  *   `clearSelection()` helper.
  */
-export function useGraphSelection() {
+export function useGraphSelection(options: UseGraphSelectionOptions = {}) {
+  const isFactNodeId = (id: string) => options.isFactNodeId?.(id) ?? false;
+
   const firstSelectedNodeId = ref<string | null>(null);
   const secondSelectedNodeId = ref<string | null>(null);
+  const selectedFactNodeId = ref<string | null>(null);
   const selectedEdgeId = ref<string | undefined>(undefined);
 
   // v-network-graph emits a `view:click` right after a node/edge click; this
@@ -43,7 +57,8 @@ export function useGraphSelection() {
   );
 
   // `v-model:selected-nodes` on <v-network-graph> is an array; bridge it to the
-  // first/second single refs the rest of the app reasons about.
+  // first/second character refs (and the single fact ref) the rest of the app
+  // reasons about.
   const selectedNodeIds = computed<string[]>({
     get() {
       const selectedNodes = [];
@@ -53,16 +68,24 @@ export function useGraphSelection() {
       if (secondSelectedNodeId.value) {
         selectedNodes.push(secondSelectedNodeId.value);
       }
+      if (selectedFactNodeId.value) {
+        selectedNodes.push(selectedFactNodeId.value);
+      }
       return selectedNodes;
     },
     set(ids) {
-      const firstId = ids?.[0];
-      const secondId = ids?.[1];
+      const characterIds = (ids ?? []).filter((id) => !isFactNodeId(id));
+      const factId = (ids ?? []).find((id) => isFactNodeId(id));
+      const firstId = characterIds[0];
+      const secondId = characterIds[1];
       if (firstId) {
         firstSelectedNodeId.value = firstId;
       }
       if (secondId) {
         secondSelectedNodeId.value = secondId;
+      }
+      if (factId) {
+        selectedFactNodeId.value = factId;
       }
     },
   });
@@ -85,11 +108,14 @@ export function useGraphSelection() {
     selectedEdgeId.value = undefined;
     firstSelectedNodeId.value = null;
     secondSelectedNodeId.value = null;
+    selectedFactNodeId.value = null;
   }
 
   return {
     firstSelectedNodeId,
     secondSelectedNodeId,
+    selectedFactNodeId,
+    isFactNodeId,
     selectedEdgeId,
     suppressNextViewClickClear,
     selectedEdgeFromId,

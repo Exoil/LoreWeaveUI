@@ -17,6 +17,13 @@ const SELECTED_STROKE_WIDTH = 4;
 const WEAK_EDGE_DASHARRAY = '6 4';
 const DEFAULT_EDGE_WIDTH = 3;
 const EMPHASIZED_EDGE_WIDTH = 6;
+const FACT_NODE_COLOR = '#d97706';
+const FACT_SELECTED_STROKE_COLOR = '#92400e';
+const FACT_NODE_RADIUS = 12;
+const DEFAULT_NODE_RADIUS = 16;
+const FACT_EDGE_COLOR = '#d9a066';
+const FACT_EDGE_DASHARRAY = '2 3';
+const FACT_EDGE_WIDTH = 2;
 
 /**
  * Builds the full <v-network-graph> configuration: node/edge styling driven by
@@ -24,37 +31,53 @@ const EMPHASIZED_EDGE_WIDTH = 6;
  * positions nodes.
  *
  * Styling reacts to flags carried on each node/edge object:
- *  - nodes: `highlighted` (on a path), `isFirstSelected`, `isSecondSelected`.
+ *  - nodes: `highlighted` (on a path), `isFirstSelected`, `isSecondSelected`,
+ *    `isFact` / `isFactSelected` (smaller amber fact nodes).
  *  - edges: `connectsSelected` (joins the two selected nodes), `highlighted`
- *    (on a path), `isStrong` (solid vs. dashed weak relation).
+ *    (on a path), `isStrong` (solid vs. dashed weak relation), `isFactEdge`
+ *    (thin dotted character→fact connection).
  *
  * @returns `{ graphConfiguration }` — pass straight to `<v-network-graph :configs>`.
  */
 export function useGraphConfiguration() {
   const graphConfiguration = reactive(vNG.getFullConfigs());
 
-  graphConfiguration.node.selectable = 2;
+  // Fact nodes may join the selection alongside the two characters.
+  graphConfiguration.node.selectable = 3;
   graphConfiguration.node.focusring.visible = false;
-  graphConfiguration.node.normal.color = (node) =>
-    node.highlighted ? PATH_HIGHLIGHT_COLOR : DEFAULT_NODE_COLOR;
+  graphConfiguration.node.normal.radius = (node) =>
+    node.isFact ? FACT_NODE_RADIUS : DEFAULT_NODE_RADIUS;
+  graphConfiguration.node.normal.color = (node) => {
+    if (node.isFact) return FACT_NODE_COLOR;
+    return node.highlighted ? PATH_HIGHLIGHT_COLOR : DEFAULT_NODE_COLOR;
+  };
   graphConfiguration.node.normal.strokeWidth = (node) =>
-    node.isFirstSelected || node.isSecondSelected ? SELECTED_STROKE_WIDTH : 0;
+    node.isFirstSelected || node.isSecondSelected || node.isFactSelected
+      ? SELECTED_STROKE_WIDTH
+      : 0;
   graphConfiguration.node.normal.strokeColor = (node) => {
+    if (node.isFactSelected) return FACT_SELECTED_STROKE_COLOR;
     if (node.isSecondSelected) return SECOND_SELECTED_STROKE_COLOR;
     if (node.isFirstSelected) return FIRST_SELECTED_STROKE_COLOR;
     return undefined;
   };
   graphConfiguration.edge.selectable = 1;
   graphConfiguration.edge.normal.color = (edge) => {
+    if (edge.isFactEdge) return FACT_EDGE_COLOR;
     if (edge.connectsSelected) return SELECTED_PAIR_EDGE_COLOR;
     if (edge.highlighted) return PATH_HIGHLIGHT_COLOR;
     return DEFAULT_EDGE_COLOR;
   };
-  graphConfiguration.edge.normal.width = (edge) =>
-    edge.connectsSelected || edge.highlighted ? EMPHASIZED_EDGE_WIDTH : DEFAULT_EDGE_WIDTH;
+  graphConfiguration.edge.normal.width = (edge) => {
+    if (edge.isFactEdge) return FACT_EDGE_WIDTH;
+    return edge.connectsSelected || edge.highlighted ? EMPHASIZED_EDGE_WIDTH : DEFAULT_EDGE_WIDTH;
+  };
   // Weak relations render as a dashed line; strong relations stay solid.
-  graphConfiguration.edge.normal.dasharray = (edge) =>
-    edge.isStrong ? undefined : WEAK_EDGE_DASHARRAY;
+  // Fact connections use a distinct dotted pattern.
+  graphConfiguration.edge.normal.dasharray = (edge) => {
+    if (edge.isFactEdge) return FACT_EDGE_DASHARRAY;
+    return edge.isStrong ? undefined : WEAK_EDGE_DASHARRAY;
+  };
   graphConfiguration.edge.type = 'straight';
   graphConfiguration.edge.marker.source.type = 'none';
   graphConfiguration.edge.marker.target.type = 'arrow';
