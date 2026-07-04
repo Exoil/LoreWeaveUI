@@ -87,6 +87,11 @@ export function useGraphConfiguration() {
   graphConfiguration.edge.summarize = false;
   graphConfiguration.edge.marker.source.type = 'none';
   graphConfiguration.edge.marker.target.type = 'arrow';
+  // Zoom scales the whole scene (nodes, edge widths, gaps, labels) together
+  // like a map. The default (false) keeps objects at constant screen size and
+  // only scales the distances, so zooming out crushes fixed-size edges and
+  // labels into each other.
+  graphConfiguration.view.scalingObjects = true;
   graphConfiguration.view.grid.visible = true;
   graphConfiguration.view.grid.interval = 10;
   graphConfiguration.view.grid.thickIncrements = 5;

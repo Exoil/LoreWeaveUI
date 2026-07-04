@@ -17,6 +17,12 @@ describe('useGraphConfiguration', () => {
     expect(graphConfiguration.edge.summarize).toBe(false);
   });
 
+  it('scales objects together with distances when zooming', () => {
+    const { graphConfiguration } = useGraphConfiguration();
+
+    expect(graphConfiguration.view.scalingObjects).toBe(true);
+  });
+
   it('keeps directed arrows on the target end', () => {
     const { graphConfiguration } = useGraphConfiguration();
 

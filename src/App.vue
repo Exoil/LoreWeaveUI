@@ -7,7 +7,8 @@
  * modal open/close flags, and wires composables ↔ child components.
  */
 import { ref, computed, onBeforeMount, onMounted, inject } from 'vue';
-import { API_BASE_URL_KEY } from '@/foundry/injection-keys';
+import { API_BASE_URL_KEY, GRAPH_LAYOUT_STORAGE_KEY } from '@/foundry/injection-keys';
+import { MODULE_ID } from '@/foundry/constants';
 import { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { NotificationService } from '@/services/NotificationService';
 import { PageQuery } from '@/services/Models/PageQuery';
@@ -28,6 +29,10 @@ import FactDetailsComponent from '@/components/FactDetailsComponent.vue';
 import KnowEdgeDetailsComponent from '@/components/KnowEdgeDetailsComponent.vue';
 import ConnectFactToCharacterComponent from '@/components/ConnectFactToCharacterComponent.vue';
 import { useGraphConfiguration } from '@/composables/useGraphConfiguration';
+import {
+  useGraphLayoutCache,
+  createLocalStorageGraphLayoutStorage,
+} from '@/composables/useGraphLayoutCache';
 import { useGraphSelection, EDGE_ID_SEPARATOR } from '@/composables/useGraphSelection';
 import { useGraphData } from '@/composables/useGraphData';
 import {
@@ -52,6 +57,16 @@ let loreWeaveApiService: LoreWeaveApiService;
 
 // --- Graph styling, state and behaviour (see src/composables) -------------
 const { graphConfiguration } = useGraphConfiguration();
+
+// Node positions survive close/reopen: the Foundry host injects a
+// game.settings-backed storage; standalone falls back to localStorage.
+// Restored nodes come back pinned exactly where the user left them.
+const layoutStorage = inject(
+  GRAPH_LAYOUT_STORAGE_KEY,
+  () => createLocalStorageGraphLayoutStorage(`${MODULE_ID}:graph-layout`),
+  true,
+);
+const { layouts } = useGraphLayoutCache(layoutStorage);
 // The predicate closes over `graph` (created just below) lazily — it only runs
 // on user interaction, long after both composables exist.
 const selection = useGraphSelection({ isFactNodeId: (id) => graph.isFactNode(id) });
@@ -220,6 +235,7 @@ function openKnowEdgeDetailsDialog(edgeId: string) {
       :edges="edgesForGraph"
       :configs="graphConfiguration"
       :event-handlers="eventHandlers"
+      v-model:layouts="layouts"
       v-model:selected-nodes="selectedNodeIds"
       v-model:selected-edges="selectedEdgeIds"
     >

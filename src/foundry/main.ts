@@ -6,6 +6,7 @@
  */
 import { LoreWeaveApp } from './LoreWeaveApp';
 import { MODULE_ID } from './constants';
+import { GRAPH_LAYOUT_SETTING } from './graph-layout-storage';
 
 export { MODULE_ID };
 
@@ -68,6 +69,15 @@ Hooks.once('init', () => {
     config: true,
     type: String,
     default: 'http://localhost:8080',
+  });
+
+  // Cached graph node positions (per-user UI preference, hidden from the
+  // settings sheet). Written by the layout cache when the window closes.
+  game.settings.register(MODULE_ID, GRAPH_LAYOUT_SETTING, {
+    scope: 'client',
+    config: false,
+    type: Object,
+    default: null,
   });
 
   const mod = game.modules.get(MODULE_ID);

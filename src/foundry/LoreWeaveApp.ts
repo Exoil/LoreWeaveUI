@@ -7,7 +7,8 @@ import RootComponent from '@/App.vue';
 import router from '@/router';
 
 import { MODULE_ID } from './constants';
-import { API_BASE_URL_KEY } from './injection-keys';
+import { API_BASE_URL_KEY, GRAPH_LAYOUT_STORAGE_KEY } from './injection-keys';
+import { createSettingsGraphLayoutStorage } from './graph-layout-storage';
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -70,6 +71,7 @@ export class LoreWeaveApp extends ApplicationV2 {
     this.vueApp = createApp(RootComponent);
     this.vueApp.use(router).use(VNetworkGraph);
     this.vueApp.provide(API_BASE_URL_KEY, this.apiBaseUrl);
+    this.vueApp.provide(GRAPH_LAYOUT_STORAGE_KEY, createSettingsGraphLayoutStorage());
     this.vueApp.mount(host);
   }
 
