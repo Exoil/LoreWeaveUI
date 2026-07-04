@@ -8,6 +8,7 @@ import { KnowRelation } from '@/services/Models/KnowRelation';
 import type { Character } from '@/services/Models/Character';
 import type { VersionedCharacter } from '@/services/Models/VersionedCharacter';
 import type { VersionedKnowRelation } from '@/services/Models/VersionedKnowRelation';
+import type { Fact } from '@/services/Models/Fact';
 import type { VersionedFact } from '@/services/Models/VersionedFact';
 import { EDGE_ID_SEPARATOR, type GraphSelection } from './useGraphSelection';
 
@@ -41,6 +42,11 @@ export function useGraphData(selection: GraphSelection) {
   /** Whether the given graph node id belongs to a fact node (vs. a character). */
   function isFactNode(id: string): boolean {
     return factNodeList.value.some((f) => f.id === id);
+  }
+
+  /** The domain {@link Fact} behind a fact-node id, or `undefined` for other ids. */
+  function getFactById(id: string): Fact | undefined {
+    return factNodeList.value.find((f) => f.id === id)?.factData;
   }
 
   // Ids of the characters on the currently highlighted relation path (the
@@ -262,6 +268,7 @@ export function useGraphData(selection: GraphSelection) {
     nodesForGraph,
     edgesForGraph,
     isFactNode,
+    getFactById,
     loadData,
     onCharacterCreated,
     onCharacterDeleted,

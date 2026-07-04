@@ -23,6 +23,8 @@ import UpdateCharacterComponent from '@/components/UpdateCharacterComponent.vue'
 import UpdateKnowEdgeComponent from '@/components/UpdateKnowEdgeComponent.vue';
 import UpdateFactComponent from '@/components/UpdateFactComponent.vue';
 import FindPathToCharacterComponent from '@/components/FindPathToCharacterComponent.vue';
+import FactTooltipComponent from '@/components/FactTooltipComponent.vue';
+import FactDetailsComponent from '@/components/FactDetailsComponent.vue';
 import { useGraphConfiguration } from '@/composables/useGraphConfiguration';
 import { useGraphSelection, EDGE_ID_SEPARATOR } from '@/composables/useGraphSelection';
 import { useGraphData } from '@/composables/useGraphData';
@@ -32,6 +34,7 @@ import {
   type FactNodeContextMenuApi,
   type EdgeContextMenuApi,
   type ViewContextMenuApi,
+  type FactTooltipApi,
 } from '@/composables/useGraphInteractions';
 
 // --- Backend access -------------------------------------------------------
@@ -57,12 +60,18 @@ const nodeMenuRef = ref<NodeContextMenuApi | null>(null);
 const factMenuRef = ref<FactNodeContextMenuApi | null>(null);
 const edgeMenuRef = ref<EdgeContextMenuApi | null>(null);
 const viewMenuRef = ref<ViewContextMenuApi | null>(null);
-const { eventHandlers } = useGraphInteractions(selection, {
-  node: nodeMenuRef,
-  factNode: factMenuRef,
-  edge: edgeMenuRef,
-  view: viewMenuRef,
-});
+const factTooltipRef = ref<FactTooltipApi | null>(null);
+const { eventHandlers } = useGraphInteractions(
+  selection,
+  {
+    node: nodeMenuRef,
+    factNode: factMenuRef,
+    edge: edgeMenuRef,
+    view: viewMenuRef,
+    factTooltip: factTooltipRef,
+  },
+  { onFactNodeClicked: openFactDetailsDialog },
+);
 
 // Pull the refs/handlers the template uses out of the composables. Top-level
 // refs are auto-unwrapped in the template, so the markup stays free of `.value`.
@@ -151,6 +160,17 @@ const updateFactDialogOpen = ref(false);
 function openUpdateFactDialog() {
   if (!selectedFactNodeId.value) return;
   updateFactDialogOpen.value = true;
+}
+
+// Read-only fact window, opened by left-clicking a fact node (the interaction
+// handler passes the clicked id; the selection is already set at that point).
+const factDetailsDialogOpen = ref(false);
+const selectedFact = computed(() =>
+  selectedFactNodeId.value ? (graph.getFactById(selectedFactNodeId.value) ?? null) : null,
+);
+function openFactDetailsDialog(factId: string) {
+  if (!graph.getFactById(factId)) return;
+  factDetailsDialogOpen.value = true;
 }
 </script>
 
@@ -255,6 +275,10 @@ function openUpdateFactDialog() {
       :factId="selectedFactNodeId"
       @updatedFact="onFactUpdated"
     />
+
+    <FactTooltipComponent ref="factTooltipRef" :getFactById="graph.getFactById" />
+
+    <FactDetailsComponent v-model:open="factDetailsDialogOpen" :fact="selectedFact" />
 
     <NotificationListComponent :notificationService="notificationService" />
 

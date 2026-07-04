@@ -16,13 +16,23 @@ export interface EdgeContextMenuApi {
 export interface ViewContextMenuApi {
   showViewContextMenu(params: vNG.ViewEvent<MouseEvent>): void;
 }
+export interface FactTooltipApi {
+  showFactTooltip(params: NodeEvent<PointerEvent>): void;
+  hideFactTooltip(): void;
+}
 
-/** Template refs to the four context-menu components, supplied by App.vue. */
+/** Template refs to the context-menu + tooltip components, supplied by App.vue. */
 export interface GraphMenus {
   node: Ref<NodeContextMenuApi | null>;
   factNode: Ref<FactNodeContextMenuApi | null>;
   edge: Ref<EdgeContextMenuApi | null>;
   view: Ref<ViewContextMenuApi | null>;
+  factTooltip: Ref<FactTooltipApi | null>;
+}
+
+export interface UseGraphInteractionsOptions {
+  /** Called when a fact node is left-clicked (App.vue opens the details window). */
+  onFactNodeClicked?: (factId: string) => void;
 }
 
 /**
@@ -35,17 +45,36 @@ export interface GraphMenus {
  * context-menu components via {@link GraphMenus}.
  *
  * @param selection shared selection state to read and update.
- * @param menus template refs to the node/edge/view context-menu components.
+ * @param menus template refs to the node/edge/view context-menu + tooltip components.
+ * @param options optional callbacks (e.g. fact node left-clicked).
  * @returns `{ eventHandlers }` — bind to `<v-network-graph :event-handlers>`.
  */
-export function useGraphInteractions(selection: GraphSelection, menus: GraphMenus) {
+export function useGraphInteractions(
+  selection: GraphSelection,
+  menus: GraphMenus,
+  options: UseGraphInteractionsOptions = {},
+) {
   function nodeClickHandler(nodeEvents: NodeEvent<MouseEvent>) {
     selection.suppressNextViewClickClear.value = true;
     if (selection.isFactNodeId(nodeEvents.node)) {
       selection.selectedFactNodeId.value = nodeEvents.node;
+      // The details window replaces the tooltip; don't leave it hanging under
+      // the modal.
+      menus.factTooltip.value?.hideFactTooltip();
+      options.onFactNodeClicked?.(nodeEvents.node);
       return;
     }
     selection.firstSelectedNodeId.value = nodeEvents.node;
+  }
+
+  function nodePointerOverHandler(params: NodeEvent<PointerEvent>) {
+    if (!selection.isFactNodeId(params.node)) return;
+    menus.factTooltip.value?.showFactTooltip(params);
+  }
+
+  function nodePointerOutHandler(params: NodeEvent<PointerEvent>) {
+    if (!selection.isFactNodeId(params.node)) return;
+    menus.factTooltip.value?.hideFactTooltip();
   }
 
   function edgeClickHandler(edgeEvent: EdgeEvent<MouseEvent>) {
@@ -68,6 +97,7 @@ export function useGraphInteractions(selection: GraphSelection, menus: GraphMenu
     // Fact nodes have their own menu and never join the character pair.
     if (selection.isFactNodeId(clickedId)) {
       selection.selectedFactNodeId.value = clickedId;
+      menus.factTooltip.value?.hideFactTooltip();
       menus.factNode.value?.showFactNodeContextMenu(params);
       return;
     }
@@ -111,6 +141,8 @@ export function useGraphInteractions(selection: GraphSelection, menus: GraphMenu
     'node:contextmenu': showNodeContextMenu,
     'edge:contextmenu': showEdgeContextMenu,
     'view:contextmenu': showViewContextMenu,
+    'node:pointerover': nodePointerOverHandler,
+    'node:pointerout': nodePointerOutHandler,
   };
 
   return { eventHandlers };
