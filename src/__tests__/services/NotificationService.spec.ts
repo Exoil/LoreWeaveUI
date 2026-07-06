@@ -66,8 +66,9 @@ describe('NotificationService', () => {
       expect(NotificationService.httpErrorMessage(404)).toContain('not found');
     });
 
-    it('describes 409 as a concurrent change', () => {
+    it('describes 409 and 412 as a concurrent change', () => {
       expect(NotificationService.httpErrorMessage(409)).toContain('changed by someone else');
+      expect(NotificationService.httpErrorMessage(412)).toContain('changed by someone else');
     });
 
     it('falls back to a generic request-failed message for other 4xx', () => {

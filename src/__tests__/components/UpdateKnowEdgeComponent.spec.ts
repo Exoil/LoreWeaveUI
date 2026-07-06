@@ -44,6 +44,29 @@ describe('UpdateKnowEdgeComponent', () => {
     expect(checkbox.element.checked).toBe(true);
   });
 
+  it('a 412 on save reloads the relation and keeps the modal open for a retry', async () => {
+    const service = makeService({
+      updateKnowRelationAsync: vi
+        .fn()
+        .mockRejectedValue({ isAxiosError: true, response: { status: 412 } }),
+    });
+    const wrapper = mountComponent(service);
+    await wrapper.setProps({ open: true });
+    await flushPromises();
+
+    await wrapper.find('#update-know-edge-description-input').setValue('my edit');
+    await wrapper.find('#update-know-edge-submit-button').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.emitted('updatedKnowEdge')).toBeUndefined();
+    expect(wrapper.emitted('update:open')).toBeUndefined();
+    // Initial open load + reload after the 412.
+    expect(service.getKnowRelationAsync).toHaveBeenCalledTimes(2);
+    expect(
+      wrapper.find<HTMLInputElement>('#update-know-edge-description-input').element.value,
+    ).toBe('old friends');
+  });
+
   it('blocks descriptions over the contract limit (256)', async () => {
     const service = makeService();
     const wrapper = mountComponent(service);

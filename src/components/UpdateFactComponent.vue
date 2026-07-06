@@ -7,7 +7,7 @@
  * - Emits `updatedFact` with the refreshed {@link VersionedFact}.
  */
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
+import { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { UpdateFact } from '@/services/Models/UpdateFact';
 import { VersionedFact } from '@/services/Models/VersionedFact';
 import { FACT_TITLE_MAX_LENGTH, FACT_CONTENT_MAX_LENGTH } from '@/services/Models/ValidationRules';
@@ -61,10 +61,20 @@ async function onClickUpdateFact() {
   controller = new AbortController();
   const signal = controller.signal;
 
-  await props.loreWeaveApiService.updateFactAsync(
-    new UpdateFact(props.factId, title.value, content.value, version.value),
-    signal,
-  );
+  try {
+    await props.loreWeaveApiService.updateFactAsync(
+      new UpdateFact(props.factId, title.value, content.value, version.value),
+      signal,
+    );
+  } catch (error) {
+    // Someone else changed the fact since it was loaded (e.g. the Foundry
+    // handout sync) — pull the fresh state and let the user retry.
+    if (LoreWeaveApiService.isPreconditionFailedError(error)) {
+      await loadFact(props.factId);
+      return;
+    }
+    throw error;
+  }
 
   // Re-read the fact so the UI reflects what was persisted, including the new
   // version, rather than trusting the local form state.

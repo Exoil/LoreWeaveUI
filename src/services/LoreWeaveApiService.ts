@@ -58,6 +58,15 @@ export class LoreWeaveApiService {
     this._loreWeaveApiClient = new LoreWeaveApiClient(baseUrl, instance);
   }
 
+  /**
+   * Whether the error is an HTTP 412 (Precondition Failed) — the entity was
+   * changed since its version (ETag) was read, e.g. by the Foundry document
+   * sync. Update forms use this to reload fresh data and let the user retry.
+   */
+  public static isPreconditionFailedError(error: unknown): boolean {
+    return isAxiosError(error) && error.response?.status === 412;
+  }
+
   /** Map a generated character payload (+ its relations and facts) to the domain {@link Character}. */
   private static toCharacter(payload: CharacterPayloadWithRelations): Character {
     const relations = (payload.knowCharacters ?? []).map(

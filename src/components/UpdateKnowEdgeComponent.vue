@@ -7,7 +7,7 @@
  * - Emits `updatedKnowEdge` with the refreshed {@link VersionedKnowRelation}.
  */
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
+import { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { UpdateKnowRelation } from '@/services/Models/UpdateKnowRelation';
 import { VersionedKnowRelation } from '@/services/Models/VersionedKnowRelation';
 import { KNOW_DESCRIPTION_MAX_LENGTH } from '@/services/Models/ValidationRules';
@@ -58,16 +58,26 @@ async function onClickUpdateKnowEdge() {
   controller = new AbortController();
   const signal = controller.signal;
 
-  await props.loreWeaveApiService.updateKnowRelationAsync(
-    new UpdateKnowRelation(
-      props.fromCharacterId,
-      props.toCharacterId,
-      description.value,
-      isStrongRelation.value,
-      version.value,
-    ),
-    signal,
-  );
+  try {
+    await props.loreWeaveApiService.updateKnowRelationAsync(
+      new UpdateKnowRelation(
+        props.fromCharacterId,
+        props.toCharacterId,
+        description.value,
+        isStrongRelation.value,
+        version.value,
+      ),
+      signal,
+    );
+  } catch (error) {
+    // The relation changed since it was loaded — pull the fresh state and
+    // let the user retry.
+    if (LoreWeaveApiService.isPreconditionFailedError(error)) {
+      await loadRelation(props.fromCharacterId, props.toCharacterId);
+      return;
+    }
+    throw error;
+  }
 
   // Re-read the relation so the UI reflects what was persisted, including the
   // new version, rather than trusting the local form state.

@@ -1,12 +1,15 @@
 <script setup lang="ts">
 /**
  * Modal to rename a character.
- * - Loads the current character (and its ETag `version`) whenever `characterId`
- *   changes, so the update carries the right version for concurrency.
+ * - Loads the current character (and its ETag `version`) each time it opens,
+ *   so the update carries the right version even after an external change
+ *   (e.g. the Foundry document sync renamed the character in the meantime).
+ * - A 412 on save reloads the fresh name + version into the form and keeps
+ *   the modal open so the user can retry.
  * - Emits `updatedCharacter` with the {@link VersionedCharacter} on success.
  */
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
+import { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { UpdateCharacter } from '@/services/Models/UpdateCharacter';
 import { VersionedCharacter } from '@/services/Models/VersionedCharacter';
 import { CHARACTER_NAME_MAX_LENGTH } from '@/services/Models/ValidationRules';
@@ -36,14 +39,24 @@ async function onClickUpdateCharacter() {
   controller = new AbortController();
 
   const signal = controller.signal;
-  await props.loreWeaveApiService.updateCharacterAsync(
-    new UpdateCharacter(
-      characterData.value.id,
-      characterData.value.name,
-      characterData.value.version,
-    ),
-    signal,
-  );
+  try {
+    await props.loreWeaveApiService.updateCharacterAsync(
+      new UpdateCharacter(
+        characterData.value.id,
+        characterData.value.name,
+        characterData.value.version,
+      ),
+      signal,
+    );
+  } catch (error) {
+    // Someone else changed the character since it was loaded (e.g. the
+    // Foundry sync) — pull the fresh name + version and let the user retry.
+    if (LoreWeaveApiService.isPreconditionFailedError(error) && props.characterId) {
+      await loadCharacterById(props.characterId);
+      return;
+    }
+    throw error;
+  }
 
   emit('updatedCharacter', characterData.value);
   open.value = false;
@@ -64,9 +77,14 @@ async function loadCharacterById(id: string) {
   characterData.value.version = dto.version;
 }
 
+// Load the current character each time the modal is opened — not just when
+// the id changes. The same character may have been renamed by the Foundry
+// sync since the last open; a stale form means a stale ETag and a 412.
+// Watching the id too covers the selection changing while the modal is open.
 watch(
-  () => props.characterId,
-  async (id) => {
+  [() => open.value, () => props.characterId],
+  async ([isOpen, id]) => {
+    if (!isOpen) return;
     if (!id) return;
     await loadCharacterById(id);
   },
