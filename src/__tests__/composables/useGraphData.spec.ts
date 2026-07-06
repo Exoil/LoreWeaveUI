@@ -77,6 +77,33 @@ describe('useGraphData × visibility (player view)', () => {
     expect(graph.edgesForGraph.value['char-1_fact-1']).toBeDefined();
   });
 
+  it('hiding a node drops its outgoing relations and fact connections too', () => {
+    // char-1 is the *source* of both edges in the sample graph.
+    const { graph } = makeGraph(false, { nodeIds: ['char-1'], edgeKeys: [] });
+
+    expect(graph.nodesForGraph.value['char-1']).toBeUndefined();
+    expect(graph.edgesForGraph.value['char-1_char-2']).toBeUndefined();
+    expect(graph.edgesForGraph.value['char-1_fact-1']).toBeUndefined();
+    // The other endpoints stay visible.
+    expect(graph.nodesForGraph.value['char-2']).toBeDefined();
+    expect(graph.nodesForGraph.value['fact-1']).toBeDefined();
+  });
+
+  it('hiding a node drops both directions of a mutual relation', () => {
+    const selection = useGraphSelection();
+    const visibility = useGraphVisibility(makeHost(false, { nodeIds: ['char-1'], edgeKeys: [] }));
+    const graph = useGraphData(selection, visibility);
+    graph.loadData([
+      new Character('char-1', 'Alice', [new KnowRelation('char-2', 'friend', true)]),
+      new Character('char-2', 'Bob', [new KnowRelation('char-1', 'rival', false)]),
+    ]);
+
+    // Outgoing from the hidden node and incoming to it are both gone.
+    expect(graph.edgesForGraph.value['char-1_char-2']).toBeUndefined();
+    expect(graph.edgesForGraph.value['char-2_char-1']).toBeUndefined();
+    expect(graph.nodesForGraph.value['char-2']).toBeDefined();
+  });
+
   it('drops a hidden fact node and its connections', () => {
     const { graph } = makeGraph(false, { nodeIds: ['fact-1'], edgeKeys: [] });
 

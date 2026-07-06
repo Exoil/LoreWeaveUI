@@ -25,6 +25,7 @@ function defaultProps(overrides = {}) {
     isFactEdge: false,
     isGameMaster: true,
     isEdgeHidden: false,
+    isEdgeHiddenViaNode: false,
     ...overrides,
   };
 }
@@ -166,6 +167,19 @@ describe('EdgeContextMenuComponent', () => {
     });
 
     expect(wrapper.find('#edge-context-toggle-visibility-button').text()).toBe('Show for players');
+  });
+
+  it('an edge hidden via a hidden node gets a disabled toggle instead of "Hide from players"', async () => {
+    const wrapper = mount(EdgeContextMenuComponent, {
+      props: defaultProps({ isEdgeHiddenViaNode: true }),
+    });
+
+    const button = wrapper.find<HTMLButtonElement>('#edge-context-toggle-visibility-button');
+    expect(button.text()).toBe('Hidden with a hidden node');
+    expect(button.element.disabled).toBe(true);
+
+    await button.trigger('click');
+    expect(wrapper.emitted('toggleEdgeVisibility')).toBeUndefined();
   });
 
   it('the visibility toggle is also available for fact edges', () => {

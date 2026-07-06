@@ -177,6 +177,13 @@ const selectedFactIsHidden = computed<boolean>(() =>
 const selectedEdgeIsHidden = computed<boolean>(() =>
   selectedEdgeId.value ? visibility.isEdgeHidden(selectedEdgeId.value) : false,
 );
+// An edge with a hidden endpoint is hidden *by the node* — its own toggle
+// would do nothing, so the menu disables it instead of offering a lie.
+const selectedEdgeIsHiddenViaNode = computed<boolean>(
+  () =>
+    (selectedEdgeFromId.value ? visibility.isNodeHidden(selectedEdgeFromId.value) : false) ||
+    (selectedEdgeToId.value ? visibility.isNodeHidden(selectedEdgeToId.value) : false),
+);
 function toggleSelectedCharacterVisibility() {
   if (!firstSelectedNodeId.value) return;
   visibility.toggleNodeVisibility(firstSelectedNodeId.value);
@@ -353,6 +360,7 @@ function openKnowEdgeDetailsDialog(edgeId: string) {
       :isFactEdge="selectedEdgeIsFactEdge"
       :isGameMaster="visibility.isGameMaster"
       :isEdgeHidden="selectedEdgeIsHidden"
+      :isEdgeHiddenViaNode="selectedEdgeIsHiddenViaNode"
       @openUpdateKnowEdgeDialog="openUpdateKnowEdgeDialog"
       @deleteKnowEdgeFromMenu="onEdgeKnowDeleted"
       @deleteFactEdgeFromMenu="onFactEdgeDeleted"

@@ -21,6 +21,12 @@ const props = defineProps<{
   isFactEdge: boolean;
   isGameMaster: boolean;
   isEdgeHidden: boolean;
+  /**
+   * The edge is hidden because one of its endpoint nodes is hidden. Its own
+   * toggle would change nothing, so the menu disables it — visibility is
+   * controlled from the node.
+   */
+  isEdgeHiddenViaNode: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -47,7 +53,7 @@ function onFactEdgeDeleted(deletedEdgeId: string) {
 }
 
 function onToggleVisibilityClick() {
-  if (!props.selectedEdgeId) return;
+  if (!props.selectedEdgeId || props.isEdgeHiddenViaNode) return;
   emit('toggleEdgeVisibility');
   hideMenu();
 }
@@ -115,9 +121,15 @@ defineExpose({
             class="dropdown-item"
             type="button"
             @click="onToggleVisibilityClick"
-            :disabled="!selectedEdgeId"
+            :disabled="!selectedEdgeId || isEdgeHiddenViaNode"
           >
-            {{ isEdgeHidden ? 'Show for players' : 'Hide from players' }}
+            {{
+              isEdgeHiddenViaNode
+                ? 'Hidden with a hidden node'
+                : isEdgeHidden
+                  ? 'Show for players'
+                  : 'Hide from players'
+            }}
           </button>
         </div>
       </div>
