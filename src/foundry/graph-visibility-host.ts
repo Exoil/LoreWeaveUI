@@ -1,6 +1,7 @@
 import type { GraphVisibilityHost, HiddenGraphItems } from '@/composables/useGraphVisibility';
 import { parseHiddenGraphItems } from '@/composables/useGraphVisibility';
 import { MODULE_ID } from './constants';
+import { subscribeToSettingChanges } from './setting-events';
 
 /** Settings key for the GM's hidden graph items (registered in `main.ts` on init). */
 export const HIDDEN_GRAPH_ITEMS_SETTING = 'hiddenGraphItems';
@@ -24,18 +25,15 @@ export function createSettingsGraphVisibilityHost(): GraphVisibilityHost {
       void game.settings.set(MODULE_ID, HIDDEN_GRAPH_ITEMS_SETTING, items);
     },
     subscribe(onChange: (items: HiddenGraphItems) => void): () => void {
-      const hookId = Hooks.on('updateSetting', (setting: unknown) => {
-        const key = (setting as { key?: string } | null)?.key;
-        if (key !== `${MODULE_ID}.${HIDDEN_GRAPH_ITEMS_SETTING}`) return;
-        // By the time updateSetting fires the local settings storage already
-        // holds the new value — re-read it instead of parsing the raw document.
+      // By the time the setting hooks fire the local settings storage already
+      // holds the new value — re-read it instead of parsing the raw document.
+      return subscribeToSettingChanges(`${MODULE_ID}.${HIDDEN_GRAPH_ITEMS_SETTING}`, () =>
         onChange(
           parseHiddenGraphItems(game.settings.get(MODULE_ID, HIDDEN_GRAPH_ITEMS_SETTING)) ?? {
             keys: [],
           },
-        );
-      });
-      return () => Hooks.off('updateSetting', hookId);
+        ),
+      );
     },
   };
 }

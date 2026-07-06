@@ -13,9 +13,24 @@ declare global {
     callAll(event: string, ...args: unknown[]): boolean;
   };
 
+  /** Minimal surface of a Foundry document the module updates. */
+  interface FoundryDocumentShim {
+    id: string;
+    name: string;
+    update(data: Record<string, unknown>): Promise<unknown>;
+  }
+
+  /** JournalEntry: pages collection + embedded-document creation. */
+  interface FoundryJournalEntryShim extends FoundryDocumentShim {
+    pages?: { contents?: unknown[] };
+    createEmbeddedDocuments?(type: string, data: Record<string, unknown>[]): Promise<unknown>;
+  }
+
   /** Narrow shim of Foundry's global `game` object — only the parts we use. */
   interface FoundryGame {
     modules: Map<string, { id: string; active: boolean; api?: unknown }>;
+    actors?: { get(id: string): FoundryDocumentShim | undefined };
+    journal?: { get(id: string): FoundryJournalEntryShim | undefined };
     settings: {
       register(namespace: string, key: string, data: Record<string, unknown>): void;
       get(namespace: string, key: string): unknown;
@@ -39,6 +54,15 @@ declare global {
   }
 
   const game: FoundryGame;
+
+  /** Narrow shim of Foundry's global `ui` — only the notification toaster. */
+  const ui: {
+    notifications?: {
+      info(message: string): void;
+      warn(message: string): void;
+      error(message: string): void;
+    };
+  };
 
   namespace foundry {
     namespace applications {

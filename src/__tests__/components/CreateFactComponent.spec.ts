@@ -64,6 +64,31 @@ describe('CreateFactComponent', () => {
     expect(wrapper.emitted('update:open')!.at(-1)).toEqual([false]);
   });
 
+  it('blocks submits that violate the contract limits (title 1..100, content 1..3000)', async () => {
+    const service = makeService();
+    const wrapper = mountComponent(service);
+    const button = wrapper.find<HTMLButtonElement>('#create-fact-submit-button');
+
+    // Empty form → invalid (both fields require 1+ chars).
+    expect(button.element.disabled).toBe(true);
+
+    // Oversized title.
+    await wrapper.find('#create-fact-title-input').setValue('t'.repeat(101));
+    await wrapper.find('#create-fact-content-input').setValue('valid content');
+    expect(button.element.disabled).toBe(true);
+
+    // Oversized content.
+    await wrapper.find('#create-fact-title-input').setValue('valid title');
+    await wrapper.find('#create-fact-content-input').setValue('c'.repeat(3001));
+    expect(button.element.disabled).toBe(true);
+    await button.trigger('click');
+    expect(service.addFactToCharacterAsync).not.toHaveBeenCalled();
+
+    // Back within limits → valid.
+    await wrapper.find('#create-fact-content-input').setValue('c'.repeat(3000));
+    expect(button.element.disabled).toBe(false);
+  });
+
   it('resets the form each time the modal is reopened', async () => {
     const wrapper = mountComponent(makeService());
 

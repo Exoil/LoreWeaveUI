@@ -43,8 +43,11 @@ export class NotificationService {
     switch (status) {
       case 404:
         return 'The requested item was not found (HTTP 404). It may have been deleted.';
+      // 409 (conflict) and 412 (stale If-Match version) both mean a
+      // concurrent change — e.g. the Foundry document sync got there first.
       case 409:
-        return 'The item was changed by someone else (HTTP 409). Reload and try again.';
+      case 412:
+        return `The item was changed by someone else (HTTP ${status}). Reload and try again.`;
       default:
         return `The request failed (HTTP ${status}). Please check your input and try again.`;
     }

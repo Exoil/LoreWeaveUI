@@ -40,6 +40,74 @@ describe('UpdateCharacterComponent', () => {
     expect(service.getCharacterAsync).toHaveBeenCalledWith('1', expect.anything());
   });
 
+  it('reloads fresh data every time the modal reopens', async () => {
+    const service = makeService();
+    const wrapper = mount(UpdateCharacterComponent, {
+      props: { loreWeaveApiService: service, characterId: '1', open: true },
+    });
+    await flushPromises();
+    expect(wrapper.find<HTMLInputElement>('#update-character-node-name-input').element.value).toBe(
+      'Frodo',
+    );
+
+    // The Foundry sync renames the character while the modal is closed.
+    (service.getCharacterAsync as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new VersionedCharacter('1', 'Frodo the Brave', '"etag-v2"'),
+    );
+    await wrapper.setProps({ open: false });
+    await wrapper.setProps({ open: true });
+    await flushPromises();
+
+    expect(service.getCharacterAsync).toHaveBeenCalledTimes(2);
+    expect(wrapper.find<HTMLInputElement>('#update-character-node-name-input').element.value).toBe(
+      'Frodo the Brave',
+    );
+  });
+
+  it('a 412 on save reloads the character and keeps the modal open for a retry', async () => {
+    const service = makeService({
+      updateCharacterAsync: vi
+        .fn()
+        .mockRejectedValue({ isAxiosError: true, response: { status: 412 } }),
+    });
+    const wrapper = mount(UpdateCharacterComponent, {
+      props: { loreWeaveApiService: service, characterId: '1', open: true },
+    });
+    await flushPromises();
+
+    await wrapper.find('#update-character-node-name-input').setValue('My rename');
+    await wrapper.find('#update-character-node-submit-button').trigger('click');
+    await flushPromises();
+
+    // No success emit, modal not closed, form reloaded with the fresh state.
+    expect(wrapper.emitted('updatedCharacter')).toBeUndefined();
+    expect(wrapper.emitted('update:open')).toBeUndefined();
+    expect(service.getCharacterAsync).toHaveBeenCalledTimes(2);
+    expect(wrapper.find<HTMLInputElement>('#update-character-node-name-input').element.value).toBe(
+      'Frodo',
+    );
+  });
+
+  it('blocks names outside the contract limit (1..50)', async () => {
+    const service = makeService();
+    const wrapper = mount(UpdateCharacterComponent, {
+      props: { loreWeaveApiService: service, characterId: '1', open: true },
+    });
+    await flushPromises();
+    const button = wrapper.find<HTMLButtonElement>('#update-character-node-submit-button');
+
+    await wrapper.find('#update-character-node-name-input').setValue('n'.repeat(51));
+    expect(button.element.disabled).toBe(true);
+    await button.trigger('click');
+    expect(service.updateCharacterAsync).not.toHaveBeenCalled();
+
+    await wrapper.find('#update-character-node-name-input').setValue('');
+    expect(button.element.disabled).toBe(true);
+
+    await wrapper.find('#update-character-node-name-input').setValue('Bilbo');
+    expect(button.element.disabled).toBe(false);
+  });
+
   it('pre-fills the input with the loaded character name', async () => {
     const wrapper = mount(UpdateCharacterComponent, {
       props: { loreWeaveApiService: makeService(), characterId: '1', open: true },

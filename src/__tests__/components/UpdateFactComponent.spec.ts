@@ -39,6 +39,47 @@ describe('UpdateFactComponent', () => {
     expect(content.element.value).toBe('Old content');
   });
 
+  it('a 412 on save reloads the fact and keeps the modal open for a retry', async () => {
+    const service = makeService({
+      updateFactAsync: vi.fn().mockRejectedValue({ isAxiosError: true, response: { status: 412 } }),
+    });
+    const wrapper = mountComponent(service);
+    await wrapper.setProps({ open: true });
+    await flushPromises();
+
+    await wrapper.find('#update-fact-title-input').setValue('My edit');
+    await wrapper.find('#update-fact-submit-button').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.emitted('updatedFact')).toBeUndefined();
+    expect(wrapper.emitted('update:open')).toBeUndefined();
+    // Initial open load + reload after the 412.
+    expect(service.getFactAsync).toHaveBeenCalledTimes(2);
+    expect(wrapper.find<HTMLInputElement>('#update-fact-title-input').element.value).toBe(
+      'Old title',
+    );
+  });
+
+  it('blocks updates that violate the contract limits (title 1..100, content 1..3000)', async () => {
+    const service = makeService();
+    const wrapper = mountComponent(service);
+    await wrapper.setProps({ open: true });
+    await flushPromises();
+    const button = wrapper.find<HTMLButtonElement>('#update-fact-submit-button');
+
+    await wrapper.find('#update-fact-content-input').setValue('c'.repeat(3001));
+    expect(button.element.disabled).toBe(true);
+    await button.trigger('click');
+    expect(service.updateFactAsync).not.toHaveBeenCalled();
+
+    await wrapper.find('#update-fact-content-input').setValue('valid content');
+    await wrapper.find('#update-fact-title-input').setValue('t'.repeat(101));
+    expect(button.element.disabled).toBe(true);
+
+    await wrapper.find('#update-fact-title-input').setValue('valid title');
+    expect(button.element.disabled).toBe(false);
+  });
+
   it('does not load when the fact id is missing', async () => {
     const service = makeService();
     const wrapper = mount(UpdateFactComponent, {

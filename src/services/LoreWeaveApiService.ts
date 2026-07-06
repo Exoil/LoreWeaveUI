@@ -10,7 +10,7 @@ import {
   UpdateKnowsDto,
 } from './httpClients/LoreWeaveApiClient';
 import { VersionedCharacter } from './Models/VersionedCharacter';
-import type { PageQuery } from './Models/PageQuery';
+import { PageQuery } from './Models/PageQuery';
 import type { UpdateCharacter } from './Models/UpdateCharacter';
 import { Character } from '@/services/Models/Character.ts';
 import { KnowRelation } from '@/services/Models/KnowRelation.ts';
@@ -58,6 +58,15 @@ export class LoreWeaveApiService {
     this._loreWeaveApiClient = new LoreWeaveApiClient(baseUrl, instance);
   }
 
+  /**
+   * Whether the error is an HTTP 412 (Precondition Failed) — the entity was
+   * changed since its version (ETag) was read, e.g. by the Foundry document
+   * sync. Update forms use this to reload fresh data and let the user retry.
+   */
+  public static isPreconditionFailedError(error: unknown): boolean {
+    return isAxiosError(error) && error.response?.status === 412;
+  }
+
   /** Map a generated character payload (+ its relations and facts) to the domain {@link Character}. */
   private static toCharacter(payload: CharacterPayloadWithRelations): Character {
     const relations = (payload.knowCharacters ?? []).map(
@@ -95,6 +104,22 @@ export class LoreWeaveApiService {
     );
   }
 
+  /**
+   * Whether a character with the given id still exists on the backend.
+   * A 404 is a normal negative answer here, not a failure — probe with a
+   * service constructed **without** a notification service, or the
+   * interceptor will toast the 404.
+   */
+  public async characterExistsAsync(id: string, signal?: AbortSignal): Promise<boolean> {
+    try {
+      await this._loreWeaveApiClient.getCharacterById(id, signal);
+      return true;
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 404) return false;
+      throw error;
+    }
+  }
+
   /** Rename a character; `updateCharacter.version` (ETag) guards concurrent edits. */
   public async updateCharacterAsync(updateCharacter: UpdateCharacter, signal?: AbortSignal) {
     const modelToUpdate = new UpdateCharacterDto({
@@ -129,6 +154,28 @@ export class LoreWeaveApiService {
     );
 
     return arrayOfCharacters.result.map((c) => LoreWeaveApiService.toCharacter(c));
+  }
+
+  /**
+   * Fetch **every** character by walking the paged endpoint with the
+   * contract's maximum page size (100) until a short page signals the end.
+   * Used to (re)load the whole graph.
+   */
+  public async getAllCharactersAsync(signal?: AbortSignal): Promise<Character[]> {
+    const pageSize = 100;
+    // Safety valve against a backend that never returns a short page; 100
+    // pages = 10k characters, far beyond anything the graph can render.
+    const maxPages = 100;
+    const all: Character[] = [];
+    for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
+      const page = await this.getCharactersAsync(
+        new PageQuery(pageNumber, pageSize, 'name', 'Asc'),
+        signal,
+      );
+      all.push(...page);
+      if (page.length < pageSize) break;
+    }
+    return all;
   }
 
   /**

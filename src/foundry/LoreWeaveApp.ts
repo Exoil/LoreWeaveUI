@@ -11,11 +11,19 @@ import {
   API_BASE_URL_KEY,
   GRAPH_LAYOUT_STORAGE_KEY,
   GRAPH_LAYOUT_SYNC_KEY,
+  GRAPH_REFRESH_KEY,
   GRAPH_VISIBILITY_HOST_KEY,
+  LINKED_DOCUMENT_UPDATER_KEY,
+  SYSTEM_CHARACTER_ID_KEY,
 } from './injection-keys';
 import { createSettingsGraphLayoutStorage } from './graph-layout-storage';
 import { createSettingsGraphVisibilityHost } from './graph-visibility-host';
 import { createSocketGraphLayoutSyncChannel } from './graph-layout-sync';
+import {
+  createLinkedDocumentUpdater,
+  createSettingsGraphRefreshSource,
+  createSystemCharacterIdAccessor,
+} from './document-sync';
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -81,6 +89,9 @@ export class LoreWeaveApp extends ApplicationV2 {
     this.vueApp.provide(GRAPH_LAYOUT_STORAGE_KEY, createSettingsGraphLayoutStorage());
     this.vueApp.provide(GRAPH_VISIBILITY_HOST_KEY, createSettingsGraphVisibilityHost());
     this.vueApp.provide(GRAPH_LAYOUT_SYNC_KEY, createSocketGraphLayoutSyncChannel());
+    this.vueApp.provide(GRAPH_REFRESH_KEY, createSettingsGraphRefreshSource());
+    this.vueApp.provide(SYSTEM_CHARACTER_ID_KEY, createSystemCharacterIdAccessor());
+    this.vueApp.provide(LINKED_DOCUMENT_UPDATER_KEY, createLinkedDocumentUpdater());
     this.vueApp.mount(host);
   }
 

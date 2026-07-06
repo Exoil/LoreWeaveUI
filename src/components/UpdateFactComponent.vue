@@ -6,10 +6,11 @@
  *   (including the new version) rather than the local form state.
  * - Emits `updatedFact` with the refreshed {@link VersionedFact}.
  */
-import { onBeforeUnmount, ref, watch } from 'vue';
-import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { UpdateFact } from '@/services/Models/UpdateFact';
 import { VersionedFact } from '@/services/Models/VersionedFact';
+import { FACT_TITLE_MAX_LENGTH, FACT_CONTENT_MAX_LENGTH } from '@/services/Models/ValidationRules';
 
 const props = defineProps<{
   loreWeaveApiService: LoreWeaveApiService;
@@ -25,6 +26,16 @@ const emit = defineEmits<{
 const title = ref('');
 const content = ref('');
 const version = ref('');
+// Contract: title 1..100, content 1..3000 — block submits that would 400.
+const titleTooLong = computed(() => title.value.length > FACT_TITLE_MAX_LENGTH);
+const contentTooLong = computed(() => content.value.length > FACT_CONTENT_MAX_LENGTH);
+const formInvalid = computed(
+  () =>
+    titleTooLong.value ||
+    contentTooLong.value ||
+    title.value.trim().length === 0 ||
+    content.value.trim().length === 0,
+);
 let controller: AbortController | null = null;
 
 /** Copy a fetched fact into the local form refs. */
@@ -44,16 +55,26 @@ async function loadFact(id: string) {
 }
 
 async function onClickUpdateFact() {
-  if (!props.factId) return;
+  if (!props.factId || formInvalid.value) return;
 
   controller?.abort();
   controller = new AbortController();
   const signal = controller.signal;
 
-  await props.loreWeaveApiService.updateFactAsync(
-    new UpdateFact(props.factId, title.value, content.value, version.value),
-    signal,
-  );
+  try {
+    await props.loreWeaveApiService.updateFactAsync(
+      new UpdateFact(props.factId, title.value, content.value, version.value),
+      signal,
+    );
+  } catch (error) {
+    // Someone else changed the fact since it was loaded (e.g. the Foundry
+    // handout sync) — pull the fresh state and let the user retry.
+    if (LoreWeaveApiService.isPreconditionFailedError(error)) {
+      await loadFact(props.factId);
+      return;
+    }
+    throw error;
+  }
 
   // Re-read the fact so the UI reflects what was persisted, including the new
   // version, rather than trusting the local form state.
@@ -94,20 +115,41 @@ onBeforeUnmount(() => {
         <input
           id="update-fact-title-input"
           class="input"
+          :class="{ 'is-danger': titleTooLong }"
           type="text"
           placeholder="Fact title"
           v-model="title"
         />
+        <p
+          id="update-fact-title-help"
+          class="help"
+          :class="titleTooLong ? 'is-danger' : 'has-text-grey'"
+        >
+          {{ title.length }} / {{ FACT_TITLE_MAX_LENGTH }} characters
+        </p>
         <textarea
           id="update-fact-content-input"
           class="textarea mt-3"
+          :class="{ 'is-danger': contentTooLong }"
           placeholder="Fact content"
           v-model="content"
         ></textarea>
+        <p
+          id="update-fact-content-help"
+          class="help"
+          :class="contentTooLong ? 'is-danger' : 'has-text-grey'"
+        >
+          {{ content.length }} / {{ FACT_CONTENT_MAX_LENGTH }} characters
+        </p>
       </section>
       <footer class="modal-card-foot">
         <div class="buttons">
-          <button id="update-fact-submit-button" class="button is-light" @click="onClickUpdateFact">
+          <button
+            id="update-fact-submit-button"
+            class="button is-light"
+            @click="onClickUpdateFact"
+            :disabled="formInvalid"
+          >
             Update
           </button>
           <button class="button is-ghost" @click="onClickCancel">Cancel</button>

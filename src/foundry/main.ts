@@ -8,6 +8,11 @@ import { LoreWeaveApp } from './LoreWeaveApp';
 import { MODULE_ID } from './constants';
 import { GRAPH_LAYOUT_SETTING } from './graph-layout-storage';
 import { HIDDEN_GRAPH_ITEMS_SETTING } from './graph-visibility-host';
+import {
+  DOCUMENT_LINKS_SETTING,
+  GRAPH_REVISION_SETTING,
+  registerDocumentSyncHooks,
+} from './document-sync';
 
 export { MODULE_ID };
 
@@ -85,6 +90,25 @@ Hooks.once('init', () => {
   // Nodes/edges the GM hid from players. World scope: only the GM can write
   // it, players read it, and Foundry syncs changes to connected clients.
   game.settings.register(MODULE_ID, HIDDEN_GRAPH_ITEMS_SETTING, {
+    scope: 'world',
+    config: false,
+    type: Object,
+    default: null,
+  });
+
+  // Links between Foundry documents (actors/journals) and the backend ids
+  // they were synced to, plus the hidden system character's id.
+  game.settings.register(MODULE_ID, DOCUMENT_LINKS_SETTING, {
+    scope: 'world',
+    config: false,
+    type: Object,
+    default: null,
+  });
+
+  // Bumped by the GM's client after every document sync: `{ revision, change }`.
+  // Open windows on all clients apply the carried change incrementally, or
+  // re-fetch the whole graph when no change descriptor is present.
+  game.settings.register(MODULE_ID, GRAPH_REVISION_SETTING, {
     scope: 'world',
     config: false,
     type: Object,
@@ -182,6 +206,10 @@ Hooks.on('renderSceneControls', (_app: unknown, html: unknown) => {
   });
   console.log(`[${MODULE_ID}] backup click listener attached`);
 });
+
+// Mirror Foundry actors and journal handouts into the backend graph. The
+// handlers are GM-gated internally, so registering unconditionally is safe.
+registerDocumentSyncHooks(getApiBaseUrl);
 
 Hooks.once('ready', () => {
   console.log(`[${MODULE_ID}] ready — API base URL:`, getApiBaseUrl());
