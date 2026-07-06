@@ -14,4 +14,10 @@ describe('FactEdge', () => {
 
     expect(edge.source).not.toBe(edge.target);
   });
+
+  it('key encodes the endpoints (shared GraphElement identity)', () => {
+    const edge = new FactEdge('char-1', 'fact-1');
+
+    expect(edge.key).toBe('char-1_fact-1');
+  });
 });

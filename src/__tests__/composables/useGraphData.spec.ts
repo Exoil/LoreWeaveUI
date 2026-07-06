@@ -41,10 +41,7 @@ function makeGraph(isGameMaster: boolean, saved: HiddenGraphItems | null = null)
 
 describe('useGraphData × visibility (GM view)', () => {
   it('keeps hidden nodes and edges, flagged isHidden, for the GM', () => {
-    const { graph } = makeGraph(true, {
-      nodeIds: ['char-2'],
-      edgeKeys: ['char-1_fact-1'],
-    });
+    const { graph } = makeGraph(true, { keys: ['char-2', 'char-1_fact-1'] });
 
     expect(Object.keys(graph.nodesForGraph.value)).toEqual(
       expect.arrayContaining(['char-1', 'char-2', 'fact-1']),
@@ -69,7 +66,7 @@ describe('useGraphData × visibility (player view)', () => {
   });
 
   it('drops a hidden character and every edge touching it', () => {
-    const { graph } = makeGraph(false, { nodeIds: ['char-2'], edgeKeys: [] });
+    const { graph } = makeGraph(false, { keys: ['char-2'] });
 
     expect(graph.nodesForGraph.value['char-2']).toBeUndefined();
     expect(graph.edgesForGraph.value['char-1_char-2']).toBeUndefined();
@@ -79,7 +76,7 @@ describe('useGraphData × visibility (player view)', () => {
 
   it('hiding a node drops its outgoing relations and fact connections too', () => {
     // char-1 is the *source* of both edges in the sample graph.
-    const { graph } = makeGraph(false, { nodeIds: ['char-1'], edgeKeys: [] });
+    const { graph } = makeGraph(false, { keys: ['char-1'] });
 
     expect(graph.nodesForGraph.value['char-1']).toBeUndefined();
     expect(graph.edgesForGraph.value['char-1_char-2']).toBeUndefined();
@@ -91,7 +88,7 @@ describe('useGraphData × visibility (player view)', () => {
 
   it('hiding a node drops both directions of a mutual relation', () => {
     const selection = useGraphSelection();
-    const visibility = useGraphVisibility(makeHost(false, { nodeIds: ['char-1'], edgeKeys: [] }));
+    const visibility = useGraphVisibility(makeHost(false, { keys: ['char-1'] }));
     const graph = useGraphData(selection, visibility);
     graph.loadData([
       new Character('char-1', 'Alice', [new KnowRelation('char-2', 'friend', true)]),
@@ -105,7 +102,7 @@ describe('useGraphData × visibility (player view)', () => {
   });
 
   it('drops a hidden fact node and its connections', () => {
-    const { graph } = makeGraph(false, { nodeIds: ['fact-1'], edgeKeys: [] });
+    const { graph } = makeGraph(false, { keys: ['fact-1'] });
 
     expect(graph.nodesForGraph.value['fact-1']).toBeUndefined();
     expect(graph.edgesForGraph.value['char-1_fact-1']).toBeUndefined();
@@ -113,7 +110,7 @@ describe('useGraphData × visibility (player view)', () => {
   });
 
   it('drops an individually hidden edge but keeps its endpoints', () => {
-    const { graph } = makeGraph(false, { nodeIds: [], edgeKeys: ['char-1_char-2'] });
+    const { graph } = makeGraph(false, { keys: ['char-1_char-2'] });
 
     expect(graph.edgesForGraph.value['char-1_char-2']).toBeUndefined();
     expect(graph.nodesForGraph.value['char-1']).toBeDefined();
@@ -134,7 +131,7 @@ describe('useGraphData × visibility (player view)', () => {
     loadSampleGraph(graph);
     expect(graph.nodesForGraph.value['char-2']).toBeDefined();
 
-    push!({ nodeIds: ['char-2'], edgeKeys: [] });
+    push!({ keys: ['char-2'] });
 
     expect(graph.nodesForGraph.value['char-2']).toBeUndefined();
     expect(graph.edgesForGraph.value['char-1_char-2']).toBeUndefined();
