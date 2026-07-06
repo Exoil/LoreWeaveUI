@@ -11,6 +11,8 @@ import {
 } from '@/services/Models/ValidationRules';
 import { MODULE_ID } from './constants';
 import { HIDDEN_GRAPH_ITEMS_SETTING } from './graph-visibility-host';
+import { subscribeToSettingChanges } from './setting-events';
+import type { GraphDataChange, GraphRefreshSource } from './injection-keys';
 
 /**
  * Mirrors Foundry documents into the RpgAssistant backend so the graph follows
@@ -125,14 +127,55 @@ async function saveLinks(links: DocumentLinks): Promise<void> {
   await game.settings.set(MODULE_ID, DOCUMENT_LINKS_SETTING, links);
 }
 
-/** Bump the revision counter; every client's open window re-fetches on the resulting updateSetting. */
-async function bumpGraphRevision(): Promise<void> {
-  const current = game.settings.get(MODULE_ID, GRAPH_REVISION_SETTING);
-  await game.settings.set(
-    MODULE_ID,
-    GRAPH_REVISION_SETTING,
-    (typeof current === 'number' ? current : 0) + 1,
-  );
+/**
+ * Narrow the persisted revision signal. Accepts the legacy plain-number shape
+ * from earlier builds (treated as "full refresh").
+ */
+export function parseGraphChangeSignal(value: unknown): {
+  revision: number;
+  change: GraphDataChange | null;
+} {
+  if (typeof value === 'number') return { revision: value, change: null };
+  if (!value || typeof value !== 'object') return { revision: 0, change: null };
+  const { revision, change } = value as { revision?: unknown; change?: unknown };
+  const parsedRevision = typeof revision === 'number' ? revision : 0;
+  const { kind, action, characterId, factId } = (change ?? {}) as {
+    kind?: unknown;
+    action?: unknown;
+    characterId?: unknown;
+    factId?: unknown;
+  };
+  if (action === 'created' || action === 'updated' || action === 'deleted') {
+    // `kind` may be absent on signals from builds that only knew characters.
+    if ((kind === 'character' || kind === undefined) && typeof characterId === 'string') {
+      return { revision: parsedRevision, change: { kind: 'character', action, characterId } };
+    }
+    if (kind === 'fact' && typeof factId === 'string') {
+      return {
+        revision: parsedRevision,
+        change: {
+          kind: 'fact',
+          action,
+          factId,
+          ...(typeof characterId === 'string' ? { characterId } : {}),
+        },
+      };
+    }
+  }
+  return { revision: parsedRevision, change: null };
+}
+
+/**
+ * Signal every client's open window that the graph changed. With a
+ * {@link GraphDataChange} the windows apply it via one targeted fetch;
+ * without one they re-fetch the whole graph.
+ */
+async function bumpGraphRevision(change?: GraphDataChange): Promise<void> {
+  const { revision } = parseGraphChangeSignal(game.settings.get(MODULE_ID, GRAPH_REVISION_SETTING));
+  await game.settings.set(MODULE_ID, GRAPH_REVISION_SETTING, {
+    revision: revision + 1,
+    change: change ?? null,
+  });
 }
 
 /** Add the element key to the GM's hidden set so players never see it. */
@@ -158,18 +201,18 @@ export function createSystemCharacterIdAccessor(): () => string {
 /**
  * Foundry-hosted refresh signal for the Vue app: fires whenever any client
  * bumps `graphRevision` (Foundry replicates world-setting updates to every
- * connected client, including the initiator). Open LoreWeave windows
- * re-fetch the graph on it.
+ * connected client, including the initiator), handing over the incremental
+ * change descriptor when the signal carries one.
  */
-export function createSettingsGraphRefreshSource(): { subscribe(cb: () => void): () => void } {
+export function createSettingsGraphRefreshSource(): GraphRefreshSource {
   return {
-    subscribe(onRefresh: () => void): () => void {
-      const hookId = Hooks.on('updateSetting', (setting: unknown) => {
-        const key = (setting as { key?: string } | null)?.key;
-        if (key !== `${MODULE_ID}.${GRAPH_REVISION_SETTING}`) return;
-        onRefresh();
+    subscribe(onRefresh: (change: GraphDataChange | null) => void): () => void {
+      return subscribeToSettingChanges(`${MODULE_ID}.${GRAPH_REVISION_SETTING}`, () => {
+        const { change } = parseGraphChangeSignal(
+          game.settings.get(MODULE_ID, GRAPH_REVISION_SETTING),
+        );
+        onRefresh(change);
       });
-      return () => Hooks.off('updateSetting', hookId);
     },
   };
 }
@@ -214,7 +257,7 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
       );
       links.actors[actor.id] = characterId;
       await saveLinks(links);
-      await bumpGraphRevision();
+      await bumpGraphRevision({ kind: 'character', action: 'created', characterId });
     });
   });
 
@@ -236,7 +279,7 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
           current.version,
         ),
       );
-      await bumpGraphRevision();
+      await bumpGraphRevision({ kind: 'character', action: 'updated', characterId });
     });
   });
 
@@ -250,7 +293,7 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
       await makeService(getApiBaseUrl).deleteCharacterAsync(characterId);
       delete links.actors[actor.id];
       await saveLinks(links);
-      await bumpGraphRevision();
+      await bumpGraphRevision({ kind: 'character', action: 'deleted', characterId });
     });
   });
 
@@ -300,7 +343,12 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
       const updatedLinks = loadLinks(); // ensureSystemCharacter may have saved
       updatedLinks.journals[journal.id] = factId;
       await saveLinks(updatedLinks);
-      await bumpGraphRevision();
+      await bumpGraphRevision({
+        kind: 'fact',
+        action: 'created',
+        factId,
+        characterId: systemCharacterId,
+      });
     });
   });
 
@@ -321,7 +369,7 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
           current.version,
         ),
       );
-      await bumpGraphRevision();
+      await bumpGraphRevision({ kind: 'fact', action: 'updated', factId });
     });
   });
 
@@ -335,7 +383,7 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
       await makeService(getApiBaseUrl).deleteFactAsync(factId);
       delete links.journals[journal.id];
       await saveLinks(links);
-      await bumpGraphRevision();
+      await bumpGraphRevision({ kind: 'fact', action: 'deleted', factId });
     });
   });
 
@@ -361,7 +409,7 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
       await service.updateFactAsync(
         new UpdateFact(factId, current.title, content, current.version),
       );
-      await bumpGraphRevision();
+      await bumpGraphRevision({ kind: 'fact', action: 'updated', factId });
     });
   }
 

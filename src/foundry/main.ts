@@ -105,13 +105,14 @@ Hooks.once('init', () => {
     default: null,
   });
 
-  // Bumped by the GM's client after every document sync; open windows on all
-  // clients re-fetch the graph when it changes.
+  // Bumped by the GM's client after every document sync: `{ revision, change }`.
+  // Open windows on all clients apply the carried change incrementally, or
+  // re-fetch the whole graph when no change descriptor is present.
   game.settings.register(MODULE_ID, GRAPH_REVISION_SETTING, {
     scope: 'world',
     config: false,
-    type: Number,
-    default: 0,
+    type: Object,
+    default: null,
   });
 
   const mod = game.modules.get(MODULE_ID);

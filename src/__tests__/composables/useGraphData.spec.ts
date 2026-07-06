@@ -54,6 +54,55 @@ describe('useGraphData loadData', () => {
   });
 });
 
+describe('useGraphData onCharacterSynced', () => {
+  it('adds an unknown character without touching the selection', () => {
+    const selection = useGraphSelection();
+    const graph = useGraphData(selection, useGraphVisibility(makeHost(true)));
+    loadSampleGraph(graph);
+
+    graph.onCharacterSynced('char-9', 'Saruman');
+
+    expect(graph.nodesForGraph.value['char-9']!.name).toBe('Saruman');
+    expect(selection.firstSelectedNodeId.value).toBeNull();
+  });
+
+  it('renames an already known character instead of duplicating it', () => {
+    const { graph } = makeGraph(true);
+
+    graph.onCharacterSynced('char-1', 'Alice the Grey');
+
+    expect(graph.nodeList.value.filter((n) => n.id === 'char-1')).toHaveLength(1);
+    expect(graph.nodesForGraph.value['char-1']!.name).toBe('Alice the Grey');
+    // The wrapped domain model follows too.
+    expect(graph.nodeList.value[0]!.characterData.name).toBe('Alice the Grey');
+  });
+});
+
+describe('useGraphData onFactSynced', () => {
+  it('adds an unknown fact with its connection edge to the anchoring character', () => {
+    const { graph } = makeGraph(true);
+
+    graph.onFactSynced(new Fact('fact-9', 'Handout', 'Secret lore'), 'char-2');
+
+    expect(graph.nodesForGraph.value['fact-9']!.name).toBe('Handout');
+    expect(graph.edgesForGraph.value['char-2_fact-9']).toBeDefined();
+    expect(graph.getCharacterIdsConnectedToFact('fact-9')).toEqual(['char-2']);
+  });
+
+  it('edits an already known fact in place instead of recreating the node', () => {
+    const { graph } = makeGraph(true);
+    const nodeBefore = graph.factNodeList.value.find((f) => f.id === 'fact-1');
+
+    graph.onFactSynced(new Fact('fact-1', 'New title', 'New content'));
+
+    const nodeAfter = graph.factNodeList.value.find((f) => f.id === 'fact-1');
+    expect(nodeAfter).toBe(nodeBefore); // same object — updated, not recreated
+    expect(nodeAfter!.name).toBe('New title');
+    expect(nodeAfter!.factData.content).toBe('New content');
+    expect(graph.factNodeList.value.filter((f) => f.id === 'fact-1')).toHaveLength(1);
+  });
+});
+
 describe('useGraphData × visibility (GM view)', () => {
   it('keeps hidden nodes and edges, flagged isHidden, for the GM', () => {
     const { graph } = makeGraph(true, { keys: ['char-2', 'char-1_fact-1'] });

@@ -10,7 +10,7 @@ import {
   UpdateKnowsDto,
 } from './httpClients/LoreWeaveApiClient';
 import { VersionedCharacter } from './Models/VersionedCharacter';
-import type { PageQuery } from './Models/PageQuery';
+import { PageQuery } from './Models/PageQuery';
 import type { UpdateCharacter } from './Models/UpdateCharacter';
 import { Character } from '@/services/Models/Character.ts';
 import { KnowRelation } from '@/services/Models/KnowRelation.ts';
@@ -145,6 +145,28 @@ export class LoreWeaveApiService {
     );
 
     return arrayOfCharacters.result.map((c) => LoreWeaveApiService.toCharacter(c));
+  }
+
+  /**
+   * Fetch **every** character by walking the paged endpoint with the
+   * contract's maximum page size (100) until a short page signals the end.
+   * Used to (re)load the whole graph.
+   */
+  public async getAllCharactersAsync(signal?: AbortSignal): Promise<Character[]> {
+    const pageSize = 100;
+    // Safety valve against a backend that never returns a short page; 100
+    // pages = 10k characters, far beyond anything the graph can render.
+    const maxPages = 100;
+    const all: Character[] = [];
+    for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
+      const page = await this.getCharactersAsync(
+        new PageQuery(pageNumber, pageSize, 'name', 'Asc'),
+        signal,
+      );
+      all.push(...page);
+      if (page.length < pageSize) break;
+    }
+    return all;
   }
 
   /**

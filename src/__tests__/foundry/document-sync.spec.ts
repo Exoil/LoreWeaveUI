@@ -4,6 +4,7 @@ import {
   extractJournalContent,
   readPageParentJournal,
   toFactContent,
+  parseGraphChangeSignal,
   EMPTY_JOURNAL_FACT_CONTENT,
 } from '@/foundry/document-sync';
 import { FACT_CONTENT_MAX_LENGTH } from '@/services/Models/ValidationRules';
@@ -63,6 +64,76 @@ describe('extractJournalContent', () => {
     expect(extractJournalContent({ pages: { contents: [{ image: {} }] } })).toBe('');
     expect(extractJournalContent({})).toBe('');
     expect(extractJournalContent(null)).toBe('');
+  });
+});
+
+describe('parseGraphChangeSignal', () => {
+  it('parses a character change descriptor', () => {
+    expect(
+      parseGraphChangeSignal({
+        revision: 4,
+        change: { kind: 'character', action: 'created', characterId: 'c-1' },
+      }),
+    ).toEqual({
+      revision: 4,
+      change: { kind: 'character', action: 'created', characterId: 'c-1' },
+    });
+  });
+
+  it('parses a fact change descriptor with its anchoring character', () => {
+    expect(
+      parseGraphChangeSignal({
+        revision: 5,
+        change: { kind: 'fact', action: 'created', factId: 'f-1', characterId: 'c-sys' },
+      }),
+    ).toEqual({
+      revision: 5,
+      change: { kind: 'fact', action: 'created', factId: 'f-1', characterId: 'c-sys' },
+    });
+  });
+
+  it('parses a fact change descriptor without a character', () => {
+    expect(
+      parseGraphChangeSignal({
+        revision: 6,
+        change: { kind: 'fact', action: 'updated', factId: 'f-1' },
+      }),
+    ).toEqual({ revision: 6, change: { kind: 'fact', action: 'updated', factId: 'f-1' } });
+  });
+
+  it('treats a kind-less character descriptor from earlier builds as a character change', () => {
+    expect(
+      parseGraphChangeSignal({ revision: 3, change: { action: 'updated', characterId: 'c-1' } }),
+    ).toEqual({
+      revision: 3,
+      change: { kind: 'character', action: 'updated', characterId: 'c-1' },
+    });
+  });
+
+  it('treats a signal without a descriptor as a full refresh', () => {
+    expect(parseGraphChangeSignal({ revision: 2, change: null })).toEqual({
+      revision: 2,
+      change: null,
+    });
+  });
+
+  it('accepts the legacy plain-number shape from earlier builds', () => {
+    expect(parseGraphChangeSignal(7)).toEqual({ revision: 7, change: null });
+  });
+
+  it('rejects malformed values into a safe full-refresh signal', () => {
+    expect(parseGraphChangeSignal(null)).toEqual({ revision: 0, change: null });
+    expect(parseGraphChangeSignal({ change: { action: 'exploded', characterId: 'c-1' } })).toEqual({
+      revision: 0,
+      change: null,
+    });
+    expect(parseGraphChangeSignal({ revision: 1, change: { action: 'created' } })).toEqual({
+      revision: 1,
+      change: null,
+    });
+    expect(
+      parseGraphChangeSignal({ revision: 1, change: { kind: 'fact', action: 'created' } }),
+    ).toEqual({ revision: 1, change: null });
   });
 });
 

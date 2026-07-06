@@ -14,11 +14,12 @@ import {
   GRAPH_REFRESH_KEY,
   GRAPH_VISIBILITY_HOST_KEY,
   SYSTEM_CHARACTER_ID_KEY,
+  type GraphDataChange,
 } from '@/foundry/injection-keys';
 import { MODULE_ID } from '@/foundry/constants';
 import { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { NotificationService } from '@/services/NotificationService';
-import { PageQuery } from '@/services/Models/PageQuery';
+import { Fact } from '@/services/Models/Fact';
 import NotificationListComponent from '@/components/NotificationListComponent.vue';
 import GraphLegendComponent from '@/components/GraphLegendComponent.vue';
 import NodeContextMenuComponent from '@/components/menus/NodeContextMenuComponent.vue';
@@ -211,8 +212,10 @@ onBeforeMount(() => {
   loreWeaveApiService = new LoreWeaveApiService(apiBaseUrl, notificationService);
 });
 
-// Initial load + re-fetch whenever the host signals the backend data changed
+// Initial load + follow-up whenever the host signals the backend data changed
 // (the GM's client synced a Foundry actor/journal — see foundry/document-sync).
+// Character changes carry a descriptor and are applied with one targeted
+// fetch; anything else falls back to reloading the whole graph.
 const graphRefreshSource = inject(GRAPH_REFRESH_KEY, null);
 let loadController: AbortController | null = null;
 let unsubscribeGraphRefresh: (() => void) | null = null;
@@ -220,9 +223,8 @@ let unsubscribeGraphRefresh: (() => void) | null = null;
 async function loadGraphData() {
   loadController?.abort();
   loadController = new AbortController();
-  const pageQuery = new PageQuery(1, 10, 'name', 'Asc');
   try {
-    const result = await loreWeaveApiService.getCharactersAsync(pageQuery, loadController.signal);
+    const result = await loreWeaveApiService.getAllCharactersAsync(loadController.signal);
     graph.loadData(result);
   } catch (error) {
     // A newer refresh aborted this one — the newer request owns the graph.
@@ -231,8 +233,53 @@ async function loadGraphData() {
   }
 }
 
+async function applyExternalGraphChange(change: GraphDataChange | null) {
+  if (!change) {
+    await loadGraphData();
+    return;
+  }
+  try {
+    if (change.kind === 'character') {
+      if (change.action === 'deleted') {
+        graph.onCharacterDeleted(change.characterId);
+        return;
+      }
+      // created/updated: fetch just the one character the API reported.
+      const character = await loreWeaveApiService.getCharacterAsync(change.characterId);
+      graph.onCharacterSynced(character.id, character.name);
+      return;
+    }
+    // Fact (handout) changes.
+    if (change.action === 'deleted') {
+      graph.onFactDeleted(change.factId);
+      return;
+    }
+    // A brand-new fact anchored to a character this window has never seen
+    // (the system character created moments ago) — reconcile with a full load.
+    if (
+      change.action === 'created' &&
+      change.characterId &&
+      !graph.getCharacterNameById(change.characterId)
+    ) {
+      await loadGraphData();
+      return;
+    }
+    const fact = await loreWeaveApiService.getFactAsync(change.factId);
+    graph.onFactSynced(
+      new Fact(fact.id, fact.title, fact.content),
+      change.action === 'created' ? change.characterId : undefined,
+    );
+  } catch (error) {
+    if (error instanceof Error && error.name === 'CanceledError') return;
+    // The HTTP interceptor already toasted; keep the window alive and let the
+    // next full load reconcile.
+    console.error('LoreWeave: applying synced change failed', error);
+  }
+}
+
 onMounted(async () => {
-  unsubscribeGraphRefresh = graphRefreshSource?.subscribe(() => void loadGraphData()) ?? null;
+  unsubscribeGraphRefresh =
+    graphRefreshSource?.subscribe((change) => void applyExternalGraphChange(change)) ?? null;
   await loadGraphData();
 });
 

@@ -35,13 +35,30 @@ export const GRAPH_LAYOUT_SYNC_KEY: InjectionKey<GraphLayoutSyncChannel | null> 
 );
 
 /**
+ * Incremental description of a change synced by the GM's client (Foundry
+ * actor/journal → backend). Carried with the refresh signal so open windows
+ * can apply it with one targeted fetch instead of re-walking every page.
+ * Fact creations name the character the fact is anchored to (the hidden
+ * system character) so the window can draw the connection edge.
+ */
+export type GraphDataChange =
+  | { kind: 'character'; action: 'created' | 'updated' | 'deleted'; characterId: string }
+  | {
+      kind: 'fact';
+      action: 'created' | 'updated' | 'deleted';
+      factId: string;
+      characterId?: string;
+    };
+
+/**
  * Host signal that the backend graph data changed (e.g. the GM's client
- * synced a Foundry actor/journal). The subscribed window re-fetches the
- * graph. The standalone SPA has no external writers, so App.vue falls back
- * to `null` (no subscription).
+ * synced a Foundry actor/journal). With a {@link GraphDataChange} the window
+ * applies it incrementally; with `null` (legacy/unrecognised signals) it
+ * re-fetches the whole graph. The standalone SPA has no external writers, so
+ * App.vue falls back to `null` (no subscription).
  */
 export interface GraphRefreshSource {
-  subscribe(onRefresh: () => void): () => void;
+  subscribe(onRefresh: (change: GraphDataChange | null) => void): () => void;
 }
 
 export const GRAPH_REFRESH_KEY: InjectionKey<GraphRefreshSource | null> =
