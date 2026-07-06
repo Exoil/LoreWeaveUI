@@ -3,16 +3,12 @@ import { NotificationService } from '@/services/NotificationService';
 import { UpdateCharacter } from '@/services/Models/UpdateCharacter';
 import { UpdateFact } from '@/services/Models/UpdateFact';
 import { parseHiddenGraphItems } from '@/composables/useGraphVisibility';
-import {
-  CHARACTER_NAME_MAX_LENGTH,
-  FACT_TITLE_MAX_LENGTH,
-  FACT_CONTENT_MAX_LENGTH,
-  clampToLength,
-} from '@/services/Models/ValidationRules';
 import { MODULE_ID } from './constants';
+import { ActorCharacter } from './ActorCharacter';
+import { JournalFact, EMPTY_JOURNAL_FACT_CONTENT } from './JournalFact';
 import { HIDDEN_GRAPH_ITEMS_SETTING } from './graph-visibility-host';
 import { subscribeToSettingChanges } from './setting-events';
-import type { GraphDataChange, GraphRefreshSource } from './injection-keys';
+import type { GraphDataChange, GraphRefreshSource, LinkedDocumentUpdater } from './injection-keys';
 
 /**
  * Mirrors Foundry documents into the RpgAssistant backend so the graph follows
@@ -71,52 +67,6 @@ export function parseDocumentLinks(value: unknown): DocumentLinks {
     journals: toStringRecord(journals),
     systemCharacterId: typeof systemCharacterId === 'string' ? systemCharacterId : '',
   };
-}
-
-/**
- * The fact content for a journal entry: the first page with text content
- * (Foundry v10+ journals are page collections), or '' for empty journals.
- */
-export function extractJournalContent(journal: unknown): string {
-  const pages = (journal as { pages?: { contents?: unknown[] } } | null)?.pages?.contents;
-  if (!Array.isArray(pages)) return '';
-  for (const page of pages) {
-    const content = (page as { text?: { content?: unknown } } | null)?.text?.content;
-    if (typeof content === 'string' && content.length > 0) return content;
-  }
-  return '';
-}
-
-/** Stand-in content for journals without any text yet (the contract requires 1+ chars). */
-export const EMPTY_JOURNAL_FACT_CONTENT = '(empty handout)';
-
-/**
- * Fit journal-derived text into the fact-content contract (1..3000): empty
- * journals get a placeholder, oversized ones are truncated — a Foundry
- * document must never make the sync 400.
- */
-export function toFactContent(raw: string): string {
-  if (raw.length === 0) return EMPTY_JOURNAL_FACT_CONTENT;
-  return clampToLength(raw, FACT_CONTENT_MAX_LENGTH);
-}
-
-/** `{ id, name }` of a Foundry document, or null when the payload is malformed. */
-function readDocumentIdentity(doc: unknown): { id: string; name: string } | null {
-  const { id, name } = (doc ?? {}) as { id?: unknown; name?: unknown };
-  if (typeof id !== 'string' || typeof name !== 'string') return null;
-  return { id, name };
-}
-
-/**
- * The parent journal of a JournalEntryPage document (the page hooks hand us
- * the page; the fact is linked to the *entry*), or null when malformed.
- */
-export function readPageParentJournal(
-  page: unknown,
-): { id: string; name: string; journal: unknown } | null {
-  const journal = (page as { parent?: unknown } | null)?.parent;
-  const identity = readDocumentIdentity(journal);
-  return identity ? { ...identity, journal } : null;
 }
 
 function loadLinks(): DocumentLinks {
@@ -189,6 +139,58 @@ async function hideFromPlayers(key: string): Promise<void> {
   });
 }
 
+/** The Foundry document id linked to the given backend id, or undefined. */
+export function findLinkedDocumentId(
+  links: Record<string, string>,
+  backendId: string,
+): string | undefined {
+  return Object.keys(links).find((documentId) => links[documentId] === backendId);
+}
+
+/**
+ * Foundry-hosted {@link LinkedDocumentUpdater}: mirrors graph-side edits back
+ * onto the linked documents. Strictly link-gated (graph-only characters and
+ * facts never touch Foundry) and loop-safe — the document update re-fires our
+ * own sync hooks, whose no-change guards stop the echo.
+ */
+export function createLinkedDocumentUpdater(): LinkedDocumentUpdater {
+  return {
+    renameLinkedActor(characterId: string, name: string): void {
+      if (!game.user?.isGM) return;
+      const actorId = findLinkedDocumentId(loadLinks().actors, characterId);
+      if (!actorId) return;
+      const actor = game.actors?.get(actorId);
+      if (!actor || actor.name === name) return;
+      void actor.update({ name });
+    },
+    updateLinkedJournal(factId: string, title: string, content: string): void {
+      if (!game.user?.isGM) return;
+      const journalId = findLinkedDocumentId(loadLinks().journals, factId);
+      if (!journalId) return;
+      const journal = game.journal?.get(journalId);
+      if (!journal) return;
+      if (journal.name !== title) void journal.update({ name: title });
+      // Never write the empty-journal placeholder back into the handout.
+      if (content === EMPTY_JOURNAL_FACT_CONTENT) return;
+      // Update the first text page, or create one for a page-less journal.
+      const pages = journal.pages?.contents ?? [];
+      const textPage = pages.find(
+        (page) => typeof (page as { text?: { content?: unknown } } | null)?.text === 'object',
+      ) as
+        | { text?: { content?: string }; update?(data: Record<string, unknown>): Promise<unknown> }
+        | undefined;
+      if (textPage?.update) {
+        if (textPage.text?.content === content) return;
+        void textPage.update({ text: { content } });
+        return;
+      }
+      void journal.createEmbeddedDocuments?.('JournalEntryPage', [
+        { name: title, type: 'text', text: { content } },
+      ]);
+    },
+  };
+}
+
 /**
  * Accessor for the hidden system character's backend id ('' while none
  * exists). A getter, not a value: the character is created lazily by the
@@ -247,51 +249,49 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
 
   // --- Actors (character sheets) → graph characters -----------------------
   Hooks.on('createActor', (doc: unknown) => {
-    const actor = readDocumentIdentity(doc);
+    const actor = ActorCharacter.fromDocument(doc);
     if (!actor) return;
     runSync('createActor', async () => {
       const links = loadLinks();
-      if (links.actors[actor.id]) return; // already linked (re-fired hook)
-      const characterId = await makeService(getApiBaseUrl).createCharacterAsync(
-        clampToLength(actor.name, CHARACTER_NAME_MAX_LENGTH),
-      );
-      links.actors[actor.id] = characterId;
+      if (links.actors[actor.actorId]) return; // already linked (re-fired hook)
+      const characterId = await makeService(getApiBaseUrl).createCharacterAsync(actor.name);
+      links.actors[actor.actorId] = characterId;
       await saveLinks(links);
       await bumpGraphRevision({ kind: 'character', action: 'created', characterId });
     });
   });
 
   Hooks.on('updateActor', (doc: unknown, changes: unknown) => {
-    const actor = readDocumentIdentity(doc);
-    const newName = (changes as { name?: unknown } | null)?.name;
-    if (!actor || typeof newName !== 'string') return;
+    // The hook fires for any actor change; only renames concern the graph.
+    if (typeof (changes as { name?: unknown } | null)?.name !== 'string') return;
+    const actor = ActorCharacter.fromDocument(doc); // doc already carries the new name
+    if (!actor) return;
     runSync('updateActor', async () => {
-      const characterId = loadLinks().actors[actor.id];
+      const characterId = loadLinks().actors[actor.actorId];
       if (!characterId) return; // actor predates the module — not linked
       const service = makeService(getApiBaseUrl);
       // Renames need the character's current version (ETag) for the
       // backend's optimistic-concurrency check.
       const current = await service.getCharacterAsync(characterId);
+      // Loop breaker: a graph-side rename mirrored onto the actor re-fires
+      // this hook with a name the backend already has.
+      if (current.name === actor.name) return;
       await service.updateCharacterAsync(
-        new UpdateCharacter(
-          characterId,
-          clampToLength(newName, CHARACTER_NAME_MAX_LENGTH),
-          current.version,
-        ),
+        new UpdateCharacter(characterId, actor.name, current.version),
       );
       await bumpGraphRevision({ kind: 'character', action: 'updated', characterId });
     });
   });
 
   Hooks.on('deleteActor', (doc: unknown) => {
-    const actor = readDocumentIdentity(doc);
+    const actor = ActorCharacter.fromDocument(doc);
     if (!actor) return;
     runSync('deleteActor', async () => {
       const links = loadLinks();
-      const characterId = links.actors[actor.id];
+      const characterId = links.actors[actor.actorId];
       if (!characterId) return;
       await makeService(getApiBaseUrl).deleteCharacterAsync(characterId);
-      delete links.actors[actor.id];
+      delete links.actors[actor.actorId];
       await saveLinks(links);
       await bumpGraphRevision({ kind: 'character', action: 'deleted', characterId });
     });
@@ -325,23 +325,23 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
   }
 
   Hooks.on('createJournalEntry', (doc: unknown) => {
-    const journal = readDocumentIdentity(doc);
-    if (!journal) return;
+    const fact = JournalFact.fromJournal(doc);
+    if (!fact) return;
     runSync('createJournalEntry', async () => {
       const links = loadLinks();
-      if (links.journals[journal.id]) return;
+      if (links.journals[fact.journalId]) return;
       const service = makeService(getApiBaseUrl);
       const systemCharacterId = await ensureSystemCharacterAsync(service);
       const factId = await service.addFactToCharacterAsync(
         systemCharacterId,
-        clampToLength(journal.name, FACT_TITLE_MAX_LENGTH),
-        toFactContent(extractJournalContent(doc)),
+        fact.title,
+        fact.content,
       );
       // Journals are private by default — the fact starts hidden and the GM
       // reveals it with "Show for players" when handing it out.
       await hideFromPlayers(factId);
       const updatedLinks = loadLinks(); // ensureSystemCharacter may have saved
-      updatedLinks.journals[journal.id] = factId;
+      updatedLinks.journals[fact.journalId] = factId;
       await saveLinks(updatedLinks);
       await bumpGraphRevision({
         kind: 'fact',
@@ -353,35 +353,34 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
   });
 
   Hooks.on('updateJournalEntry', (doc: unknown, changes: unknown) => {
-    const journal = readDocumentIdentity(doc);
-    const newName = (changes as { name?: unknown } | null)?.name;
-    if (!journal || typeof newName !== 'string') return;
+    // The hook fires for any journal change; only renames concern the title.
+    if (typeof (changes as { name?: unknown } | null)?.name !== 'string') return;
+    const fact = JournalFact.fromJournal(doc); // doc already carries the new name
+    if (!fact) return;
     runSync('updateJournalEntry', async () => {
-      const factId = loadLinks().journals[journal.id];
+      const factId = loadLinks().journals[fact.journalId];
       if (!factId) return;
       const service = makeService(getApiBaseUrl);
       const current = await service.getFactAsync(factId);
+      // Loop breaker: a graph-side fact edit mirrored onto the journal
+      // re-fires this hook with a title the backend already has.
+      if (current.title === fact.title) return;
       await service.updateFactAsync(
-        new UpdateFact(
-          factId,
-          clampToLength(newName, FACT_TITLE_MAX_LENGTH),
-          current.content,
-          current.version,
-        ),
+        new UpdateFact(factId, fact.title, current.content, current.version),
       );
       await bumpGraphRevision({ kind: 'fact', action: 'updated', factId });
     });
   });
 
   Hooks.on('deleteJournalEntry', (doc: unknown) => {
-    const journal = readDocumentIdentity(doc);
-    if (!journal) return;
+    const fact = JournalFact.fromJournal(doc);
+    if (!fact) return;
     runSync('deleteJournalEntry', async () => {
       const links = loadLinks();
-      const factId = links.journals[journal.id];
+      const factId = links.journals[fact.journalId];
       if (!factId) return;
       await makeService(getApiBaseUrl).deleteFactAsync(factId);
-      delete links.journals[journal.id];
+      delete links.journals[fact.journalId];
       await saveLinks(links);
       await bumpGraphRevision({ kind: 'fact', action: 'deleted', factId });
     });
@@ -397,17 +396,16 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
    * handled by the updateJournalEntry hook.
    */
   function syncJournalContent(operation: string, page: unknown): void {
-    const parent = readPageParentJournal(page);
-    if (!parent) return;
+    const fact = JournalFact.fromPage(page);
+    if (!fact) return;
     runSync(operation, async () => {
-      const factId = loadLinks().journals[parent.id];
+      const factId = loadLinks().journals[fact.journalId];
       if (!factId) return;
-      const content = toFactContent(extractJournalContent(parent.journal));
       const service = makeService(getApiBaseUrl);
       const current = await service.getFactAsync(factId);
-      if (current.content === content) return;
+      if (current.content === fact.content) return;
       await service.updateFactAsync(
-        new UpdateFact(factId, current.title, content, current.version),
+        new UpdateFact(factId, current.title, fact.content, current.version),
       );
       await bumpGraphRevision({ kind: 'fact', action: 'updated', factId });
     });

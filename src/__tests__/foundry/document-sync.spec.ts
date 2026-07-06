@@ -1,13 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   parseDocumentLinks,
-  extractJournalContent,
-  readPageParentJournal,
-  toFactContent,
   parseGraphChangeSignal,
-  EMPTY_JOURNAL_FACT_CONTENT,
+  findLinkedDocumentId,
 } from '@/foundry/document-sync';
-import { FACT_CONTENT_MAX_LENGTH } from '@/services/Models/ValidationRules';
 
 describe('parseDocumentLinks', () => {
   it('parses a well-formed value', () => {
@@ -41,29 +37,6 @@ describe('parseDocumentLinks', () => {
 
     expect(links.actors).toEqual({ 'actor-1': 'char-1' });
     expect(links.systemCharacterId).toBe('');
-  });
-});
-
-describe('extractJournalContent', () => {
-  it('returns the first page with text content', () => {
-    const journal = {
-      pages: {
-        contents: [
-          { text: {} },
-          { text: { content: '<p>The secret history</p>' } },
-          { text: { content: 'later page' } },
-        ],
-      },
-    };
-
-    expect(extractJournalContent(journal)).toBe('<p>The secret history</p>');
-  });
-
-  it('returns an empty string for journals without text pages', () => {
-    expect(extractJournalContent({ pages: { contents: [] } })).toBe('');
-    expect(extractJournalContent({ pages: { contents: [{ image: {} }] } })).toBe('');
-    expect(extractJournalContent({})).toBe('');
-    expect(extractJournalContent(null)).toBe('');
   });
 });
 
@@ -137,42 +110,15 @@ describe('parseGraphChangeSignal', () => {
   });
 });
 
-describe('toFactContent', () => {
-  it('passes normal content through unchanged', () => {
-    expect(toFactContent('<p>The secret history</p>')).toBe('<p>The secret history</p>');
+describe('findLinkedDocumentId', () => {
+  it('finds the Foundry document id linked to a backend id', () => {
+    const links = { 'actor-1': 'char-1', 'actor-2': 'char-2' };
+
+    expect(findLinkedDocumentId(links, 'char-2')).toBe('actor-2');
   });
 
-  it('replaces empty content with the placeholder (contract requires 1+ chars)', () => {
-    expect(toFactContent('')).toBe(EMPTY_JOURNAL_FACT_CONTENT);
-  });
-
-  it('truncates oversized content to the contract limit', () => {
-    const oversized = 'x'.repeat(FACT_CONTENT_MAX_LENGTH + 500);
-
-    const content = toFactContent(oversized);
-
-    expect(content).toHaveLength(FACT_CONTENT_MAX_LENGTH);
-    expect(content).toBe(oversized.slice(0, FACT_CONTENT_MAX_LENGTH));
-  });
-});
-
-describe('readPageParentJournal', () => {
-  it('returns the parent journal identity and document', () => {
-    const journal = { id: 'journal-1', name: 'Handout', pages: { contents: [] } };
-    const page = { id: 'page-1', name: 'Page 1', parent: journal };
-
-    const parent = readPageParentJournal(page);
-
-    expect(parent).not.toBeNull();
-    expect(parent!.id).toBe('journal-1');
-    expect(parent!.name).toBe('Handout');
-    expect(parent!.journal).toBe(journal);
-  });
-
-  it('returns null for pages without a well-formed parent', () => {
-    expect(readPageParentJournal({ id: 'page-1', parent: null })).toBeNull();
-    expect(readPageParentJournal({ id: 'page-1', parent: { id: 42 } })).toBeNull();
-    expect(readPageParentJournal({})).toBeNull();
-    expect(readPageParentJournal(null)).toBeNull();
+  it('returns undefined for backend ids without a link (graph-only entities)', () => {
+    expect(findLinkedDocumentId({ 'actor-1': 'char-1' }, 'char-9')).toBeUndefined();
+    expect(findLinkedDocumentId({}, 'char-1')).toBeUndefined();
   });
 });

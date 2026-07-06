@@ -13,6 +13,7 @@ import {
   GRAPH_LAYOUT_SYNC_KEY,
   GRAPH_REFRESH_KEY,
   GRAPH_VISIBILITY_HOST_KEY,
+  LINKED_DOCUMENT_UPDATER_KEY,
   SYSTEM_CHARACTER_ID_KEY,
   type GraphDataChange,
 } from '@/foundry/injection-keys';
@@ -20,6 +21,8 @@ import { MODULE_ID } from '@/foundry/constants';
 import { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { NotificationService } from '@/services/NotificationService';
 import { Fact } from '@/services/Models/Fact';
+import type { VersionedCharacter } from '@/services/Models/VersionedCharacter';
+import type { VersionedFact } from '@/services/Models/VersionedFact';
 import NotificationListComponent from '@/components/NotificationListComponent.vue';
 import GraphLegendComponent from '@/components/GraphLegendComponent.vue';
 import NodeContextMenuComponent from '@/components/menus/NodeContextMenuComponent.vue';
@@ -167,6 +170,20 @@ const {
 const selectedEdgeIsFactEdge = computed<boolean>(() =>
   selectedEdgeToId.value ? graph.isFactNode(selectedEdgeToId.value) : false,
 );
+
+// --- Graph → Foundry mirroring ---------------------------------------------
+// Graph-side edits flow back onto the linked Foundry documents (rename the
+// actor, update the handout). Strictly link-gated: graph-only characters and
+// facts never touch Foundry. Standalone SPA: null → no mirroring.
+const linkedDocumentUpdater = inject(LINKED_DOCUMENT_UPDATER_KEY, null);
+function onCharacterUpdatedInDialog(character: VersionedCharacter) {
+  onCharacterUpdated(character);
+  linkedDocumentUpdater?.renameLinkedActor(character.id, character.name);
+}
+function onFactUpdatedInDialog(fact: VersionedFact) {
+  onFactUpdated(fact);
+  linkedDocumentUpdater?.updateLinkedJournal(fact.id, fact.title, fact.content);
+}
 
 // --- GM hide/show (context-menu wiring) ------------------------------------
 // Hidden flags for whatever is currently selected drive the menu labels
@@ -463,7 +480,7 @@ function openKnowEdgeDetailsDialog(edgeId: string) {
       v-model:open="updateNodeCharacterNodeModal"
       :loreWeaveApiService="loreWeaveApiService"
       :characterId="firstSelectedNodeId"
-      @updatedCharacter="onCharacterUpdated"
+      @updatedCharacter="onCharacterUpdatedInDialog"
     />
 
     <CreateCharacterKnowEdgeComponent
@@ -500,7 +517,7 @@ function openKnowEdgeDetailsDialog(edgeId: string) {
       v-model:open="updateFactDialogOpen"
       :loreWeaveApiService="loreWeaveApiService"
       :factId="selectedFactNodeId"
-      @updatedFact="onFactUpdated"
+      @updatedFact="onFactUpdatedInDialog"
     />
 
     <ConnectFactToCharacterComponent

@@ -71,3 +71,19 @@ export const GRAPH_REFRESH_KEY: InjectionKey<GraphRefreshSource | null> =
 export const SYSTEM_CHARACTER_ID_KEY: InjectionKey<() => string> = Symbol(
   'loreWeaveSystemCharacterId',
 );
+
+/**
+ * Mirrors graph-side edits back onto the linked Foundry documents: renaming a
+ * character node renames its actor, editing a handout-fact updates its
+ * journal. Strictly link-gated — graph-only characters/facts never touch
+ * Foundry. The standalone SPA has no documents, so App.vue falls back to
+ * `null`.
+ */
+export interface LinkedDocumentUpdater {
+  renameLinkedActor(characterId: string, name: string): void;
+  updateLinkedJournal(factId: string, title: string, content: string): void;
+}
+
+export const LINKED_DOCUMENT_UPDATER_KEY: InjectionKey<LinkedDocumentUpdater | null> = Symbol(
+  'loreWeaveLinkedDocumentUpdater',
+);
