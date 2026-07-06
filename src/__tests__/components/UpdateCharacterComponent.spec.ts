@@ -40,6 +40,26 @@ describe('UpdateCharacterComponent', () => {
     expect(service.getCharacterAsync).toHaveBeenCalledWith('1', expect.anything());
   });
 
+  it('blocks names outside the contract limit (1..50)', async () => {
+    const service = makeService();
+    const wrapper = mount(UpdateCharacterComponent, {
+      props: { loreWeaveApiService: service, characterId: '1', open: true },
+    });
+    await flushPromises();
+    const button = wrapper.find<HTMLButtonElement>('#update-character-node-submit-button');
+
+    await wrapper.find('#update-character-node-name-input').setValue('n'.repeat(51));
+    expect(button.element.disabled).toBe(true);
+    await button.trigger('click');
+    expect(service.updateCharacterAsync).not.toHaveBeenCalled();
+
+    await wrapper.find('#update-character-node-name-input').setValue('');
+    expect(button.element.disabled).toBe(true);
+
+    await wrapper.find('#update-character-node-name-input').setValue('Bilbo');
+    expect(button.element.disabled).toBe(false);
+  });
+
   it('pre-fills the input with the loaded character name', async () => {
     const wrapper = mount(UpdateCharacterComponent, {
       props: { loreWeaveApiService: makeService(), characterId: '1', open: true },

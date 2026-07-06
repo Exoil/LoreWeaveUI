@@ -3,7 +3,10 @@ import {
   parseDocumentLinks,
   extractJournalContent,
   readPageParentJournal,
+  toFactContent,
+  EMPTY_JOURNAL_FACT_CONTENT,
 } from '@/foundry/document-sync';
+import { FACT_CONTENT_MAX_LENGTH } from '@/services/Models/ValidationRules';
 
 describe('parseDocumentLinks', () => {
   it('parses a well-formed value', () => {
@@ -60,6 +63,25 @@ describe('extractJournalContent', () => {
     expect(extractJournalContent({ pages: { contents: [{ image: {} }] } })).toBe('');
     expect(extractJournalContent({})).toBe('');
     expect(extractJournalContent(null)).toBe('');
+  });
+});
+
+describe('toFactContent', () => {
+  it('passes normal content through unchanged', () => {
+    expect(toFactContent('<p>The secret history</p>')).toBe('<p>The secret history</p>');
+  });
+
+  it('replaces empty content with the placeholder (contract requires 1+ chars)', () => {
+    expect(toFactContent('')).toBe(EMPTY_JOURNAL_FACT_CONTENT);
+  });
+
+  it('truncates oversized content to the contract limit', () => {
+    const oversized = 'x'.repeat(FACT_CONTENT_MAX_LENGTH + 500);
+
+    const content = toFactContent(oversized);
+
+    expect(content).toHaveLength(FACT_CONTENT_MAX_LENGTH);
+    expect(content).toBe(oversized.slice(0, FACT_CONTENT_MAX_LENGTH));
   });
 });
 

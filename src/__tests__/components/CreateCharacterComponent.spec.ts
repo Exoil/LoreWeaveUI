@@ -40,6 +40,25 @@ describe('CreateCharacterComponent', () => {
     expect(service.createCharacterAsync).toHaveBeenCalledWith('Gandalf', expect.anything());
   });
 
+  it('blocks names outside the contract limit (1..50)', async () => {
+    const service = makeService();
+    const wrapper = mount(CreateCharacterComponent, {
+      props: { loreWeaveApiService: service, open: true },
+    });
+    const button = wrapper.find<HTMLButtonElement>('#create-character-node-submit-button');
+
+    // Empty name → invalid (min 1 char).
+    expect(button.element.disabled).toBe(true);
+
+    await wrapper.find('#create-character-node-name-input').setValue('n'.repeat(51));
+    expect(button.element.disabled).toBe(true);
+    await button.trigger('click');
+    expect(service.createCharacterAsync).not.toHaveBeenCalled();
+
+    await wrapper.find('#create-character-node-name-input').setValue('n'.repeat(50));
+    expect(button.element.disabled).toBe(false);
+  });
+
   it('emits characterCreated with a CharacterNode after create', async () => {
     const wrapper = mount(CreateCharacterComponent, {
       props: { loreWeaveApiService: makeService(), open: true },

@@ -44,6 +44,22 @@ describe('UpdateKnowEdgeComponent', () => {
     expect(checkbox.element.checked).toBe(true);
   });
 
+  it('blocks descriptions over the contract limit (256)', async () => {
+    const service = makeService();
+    const wrapper = mountComponent(service);
+    await wrapper.setProps({ open: true });
+    await flushPromises();
+    const button = wrapper.find<HTMLButtonElement>('#update-know-edge-submit-button');
+
+    await wrapper.find('#update-know-edge-description-input').setValue('d'.repeat(257));
+    expect(button.element.disabled).toBe(true);
+    await button.trigger('click');
+    expect(service.updateKnowRelationAsync).not.toHaveBeenCalled();
+
+    await wrapper.find('#update-know-edge-description-input').setValue('within limits');
+    expect(button.element.disabled).toBe(false);
+  });
+
   it('does not load when the character ids are missing', async () => {
     const service = makeService();
     const wrapper = mount(UpdateKnowEdgeComponent, {

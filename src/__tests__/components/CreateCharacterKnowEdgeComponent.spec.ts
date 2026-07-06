@@ -31,6 +31,20 @@ describe('CreateCharacterKnowEdgeComponent', () => {
     expect(button.element.disabled).toBe(true);
   });
 
+  it('blocks descriptions over the contract limit (256)', async () => {
+    const service = makeService();
+    const wrapper = mountComponent(service);
+    const button = wrapper.find<HTMLButtonElement>('#create-know-edge-button');
+
+    await wrapper.find('#create-know-edge-description-input').setValue('d'.repeat(257));
+    expect(button.element.disabled).toBe(true);
+    await button.trigger('click');
+    expect(service.createKnowRelationBetweenCharacters).not.toHaveBeenCalled();
+
+    await wrapper.find('#create-know-edge-description-input').setValue('d'.repeat(256));
+    expect(button.element.disabled).toBe(false);
+  });
+
   it('defaults to a strong relation with an empty description', async () => {
     const service = makeService();
     const wrapper = mountComponent(service);

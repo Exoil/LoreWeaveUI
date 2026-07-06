@@ -5,10 +5,11 @@
  * - Emits `characterCreated` with the new {@link CharacterNode} after the backend
  *   call succeeds, then clears the form and closes.
  */
-import { onBeforeUnmount, ref } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { CharacterNode } from '@/models/CharacterNode';
 import { Character } from '@/services/Models/Character';
+import { CHARACTER_NAME_MAX_LENGTH } from '@/services/Models/ValidationRules';
 
 const props = defineProps<{
   loreWeaveApiService: LoreWeaveApiService;
@@ -22,9 +23,15 @@ const emit = defineEmits<{
 
 let controller: AbortController | null = null;
 const characterCreateName = ref('');
+// Contract: name 1..50 — block submits that would 400.
+const nameTooLong = computed(() => characterCreateName.value.length > CHARACTER_NAME_MAX_LENGTH);
+const formInvalid = computed(
+  () => nameTooLong.value || characterCreateName.value.trim().length === 0,
+);
 
 /** Create the character on the backend, emit the new node, then reset + close. */
 async function onClickCreateCharacter() {
+  if (formInvalid.value) return;
   controller?.abort();
   controller = new AbortController();
 
@@ -60,11 +67,19 @@ onBeforeUnmount(() => {
       <section class="modal-card-body">
         <input
           class="input"
+          :class="{ 'is-danger': nameTooLong }"
           id="create-character-node-name-input"
           type="text"
           placeholder="Enter new name"
           v-model="characterCreateName"
         />
+        <p
+          id="create-character-node-name-help"
+          class="help"
+          :class="nameTooLong ? 'is-danger' : 'has-text-grey'"
+        >
+          {{ characterCreateName.length }} / {{ CHARACTER_NAME_MAX_LENGTH }} characters
+        </p>
       </section>
       <footer class="modal-card-foot">
         <div class="buttons">
@@ -72,6 +87,7 @@ onBeforeUnmount(() => {
             id="create-character-node-submit-button"
             class="button is-light"
             @click="onClickCreateCharacter"
+            :disabled="formInvalid"
           >
             Create
           </button>

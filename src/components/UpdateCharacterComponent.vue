@@ -5,10 +5,11 @@
  *   changes, so the update carries the right version for concurrency.
  * - Emits `updatedCharacter` with the {@link VersionedCharacter} on success.
  */
-import { onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { UpdateCharacter } from '@/services/Models/UpdateCharacter';
 import { VersionedCharacter } from '@/services/Models/VersionedCharacter';
+import { CHARACTER_NAME_MAX_LENGTH } from '@/services/Models/ValidationRules';
 
 const props = defineProps<{
   loreWeaveApiService: LoreWeaveApiService;
@@ -22,9 +23,15 @@ const emit = defineEmits<{
 }>();
 
 const characterData = ref(new VersionedCharacter('', '', ''));
+// Contract: name 1..50 — block submits that would 400.
+const nameTooLong = computed(() => characterData.value.name.length > CHARACTER_NAME_MAX_LENGTH);
+const formInvalid = computed(
+  () => nameTooLong.value || characterData.value.name.trim().length === 0,
+);
 let controller: AbortController | null = null;
 
 async function onClickUpdateCharacter() {
+  if (formInvalid.value) return;
   controller?.abort();
   controller = new AbortController();
 
@@ -81,11 +88,19 @@ onBeforeUnmount(() => {
       <section class="modal-card-body">
         <input
           class="input"
+          :class="{ 'is-danger': nameTooLong }"
           id="update-character-node-name-input"
           type="text"
           placeholder="Enter new name"
           v-model="characterData.name"
         />
+        <p
+          id="update-character-node-name-help"
+          class="help"
+          :class="nameTooLong ? 'is-danger' : 'has-text-grey'"
+        >
+          {{ characterData.name.length }} / {{ CHARACTER_NAME_MAX_LENGTH }} characters
+        </p>
       </section>
       <footer class="modal-card-foot">
         <div class="buttons">
@@ -93,6 +108,7 @@ onBeforeUnmount(() => {
             class="button is-light"
             id="update-character-node-submit-button"
             @click="onClickUpdateCharacter"
+            :disabled="formInvalid"
           >
             Update
           </button>

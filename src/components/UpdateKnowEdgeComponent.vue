@@ -6,10 +6,11 @@
  *   (including the new version) rather than the local form state.
  * - Emits `updatedKnowEdge` with the refreshed {@link VersionedKnowRelation}.
  */
-import { onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { UpdateKnowRelation } from '@/services/Models/UpdateKnowRelation';
 import { VersionedKnowRelation } from '@/services/Models/VersionedKnowRelation';
+import { KNOW_DESCRIPTION_MAX_LENGTH } from '@/services/Models/ValidationRules';
 
 const props = defineProps<{
   loreWeaveApiService: LoreWeaveApiService;
@@ -26,6 +27,8 @@ const emit = defineEmits<{
 const description = ref('');
 const isStrongRelation = ref(true);
 const version = ref('');
+// Contract: description 0..256 (may be empty) — block submits that would 400.
+const descriptionTooLong = computed(() => description.value.length > KNOW_DESCRIPTION_MAX_LENGTH);
 let controller: AbortController | null = null;
 
 /** Copy a fetched relation into the local form refs. */
@@ -49,7 +52,7 @@ async function loadRelation(fromId: string, toId: string) {
 }
 
 async function onClickUpdateKnowEdge() {
-  if (!props.fromCharacterId || !props.toCharacterId) return;
+  if (!props.fromCharacterId || !props.toCharacterId || descriptionTooLong.value) return;
 
   controller?.abort();
   controller = new AbortController();
@@ -109,10 +112,18 @@ onBeforeUnmount(() => {
         <input
           id="update-know-edge-description-input"
           class="input"
+          :class="{ 'is-danger': descriptionTooLong }"
           type="text"
           placeholder="Relation description"
           v-model="description"
         />
+        <p
+          id="update-know-edge-description-help"
+          class="help"
+          :class="descriptionTooLong ? 'is-danger' : 'has-text-grey'"
+        >
+          {{ description.length }} / {{ KNOW_DESCRIPTION_MAX_LENGTH }} characters
+        </p>
         <label id="update-know-edge-strong-label" class="checkbox mt-3">
           <input id="update-know-edge-strong-checkbox" type="checkbox" v-model="isStrongRelation" />
           Strong relation
@@ -124,6 +135,7 @@ onBeforeUnmount(() => {
             id="update-know-edge-submit-button"
             class="button is-light"
             @click="onClickUpdateKnowEdge"
+            :disabled="descriptionTooLong"
           >
             Update
           </button>

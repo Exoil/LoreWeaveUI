@@ -3,6 +3,12 @@ import { NotificationService } from '@/services/NotificationService';
 import { UpdateCharacter } from '@/services/Models/UpdateCharacter';
 import { UpdateFact } from '@/services/Models/UpdateFact';
 import { parseHiddenGraphItems } from '@/composables/useGraphVisibility';
+import {
+  CHARACTER_NAME_MAX_LENGTH,
+  FACT_TITLE_MAX_LENGTH,
+  FACT_CONTENT_MAX_LENGTH,
+  clampToLength,
+} from '@/services/Models/ValidationRules';
 import { MODULE_ID } from './constants';
 import { HIDDEN_GRAPH_ITEMS_SETTING } from './graph-visibility-host';
 
@@ -77,6 +83,19 @@ export function extractJournalContent(journal: unknown): string {
     if (typeof content === 'string' && content.length > 0) return content;
   }
   return '';
+}
+
+/** Stand-in content for journals without any text yet (the contract requires 1+ chars). */
+export const EMPTY_JOURNAL_FACT_CONTENT = '(empty handout)';
+
+/**
+ * Fit journal-derived text into the fact-content contract (1..3000): empty
+ * journals get a placeholder, oversized ones are truncated — a Foundry
+ * document must never make the sync 400.
+ */
+export function toFactContent(raw: string): string {
+  if (raw.length === 0) return EMPTY_JOURNAL_FACT_CONTENT;
+  return clampToLength(raw, FACT_CONTENT_MAX_LENGTH);
 }
 
 /** `{ id, name }` of a Foundry document, or null when the payload is malformed. */
@@ -190,7 +209,9 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
     runSync('createActor', async () => {
       const links = loadLinks();
       if (links.actors[actor.id]) return; // already linked (re-fired hook)
-      const characterId = await makeService(getApiBaseUrl).createCharacterAsync(actor.name);
+      const characterId = await makeService(getApiBaseUrl).createCharacterAsync(
+        clampToLength(actor.name, CHARACTER_NAME_MAX_LENGTH),
+      );
       links.actors[actor.id] = characterId;
       await saveLinks(links);
       await bumpGraphRevision();
@@ -209,7 +230,11 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
       // backend's optimistic-concurrency check.
       const current = await service.getCharacterAsync(characterId);
       await service.updateCharacterAsync(
-        new UpdateCharacter(characterId, newName, current.version),
+        new UpdateCharacter(
+          characterId,
+          clampToLength(newName, CHARACTER_NAME_MAX_LENGTH),
+          current.version,
+        ),
       );
       await bumpGraphRevision();
     });
@@ -266,8 +291,8 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
       const systemCharacterId = await ensureSystemCharacterAsync(service);
       const factId = await service.addFactToCharacterAsync(
         systemCharacterId,
-        journal.name,
-        extractJournalContent(doc),
+        clampToLength(journal.name, FACT_TITLE_MAX_LENGTH),
+        toFactContent(extractJournalContent(doc)),
       );
       // Journals are private by default — the fact starts hidden and the GM
       // reveals it with "Show for players" when handing it out.
@@ -289,7 +314,12 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
       const service = makeService(getApiBaseUrl);
       const current = await service.getFactAsync(factId);
       await service.updateFactAsync(
-        new UpdateFact(factId, newName, current.content, current.version),
+        new UpdateFact(
+          factId,
+          clampToLength(newName, FACT_TITLE_MAX_LENGTH),
+          current.content,
+          current.version,
+        ),
       );
       await bumpGraphRevision();
     });
@@ -324,7 +354,7 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
     runSync(operation, async () => {
       const factId = loadLinks().journals[parent.id];
       if (!factId) return;
-      const content = extractJournalContent(parent.journal);
+      const content = toFactContent(extractJournalContent(parent.journal));
       const service = makeService(getApiBaseUrl);
       const current = await service.getFactAsync(factId);
       if (current.content === content) return;

@@ -39,6 +39,26 @@ describe('UpdateFactComponent', () => {
     expect(content.element.value).toBe('Old content');
   });
 
+  it('blocks updates that violate the contract limits (title 1..100, content 1..3000)', async () => {
+    const service = makeService();
+    const wrapper = mountComponent(service);
+    await wrapper.setProps({ open: true });
+    await flushPromises();
+    const button = wrapper.find<HTMLButtonElement>('#update-fact-submit-button');
+
+    await wrapper.find('#update-fact-content-input').setValue('c'.repeat(3001));
+    expect(button.element.disabled).toBe(true);
+    await button.trigger('click');
+    expect(service.updateFactAsync).not.toHaveBeenCalled();
+
+    await wrapper.find('#update-fact-content-input').setValue('valid content');
+    await wrapper.find('#update-fact-title-input').setValue('t'.repeat(101));
+    expect(button.element.disabled).toBe(true);
+
+    await wrapper.find('#update-fact-title-input').setValue('valid title');
+    expect(button.element.disabled).toBe(false);
+  });
+
   it('does not load when the fact id is missing', async () => {
     const service = makeService();
     const wrapper = mount(UpdateFactComponent, {
