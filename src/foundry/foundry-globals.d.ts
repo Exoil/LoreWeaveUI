@@ -40,6 +40,15 @@ declare global {
 
   const game: FoundryGame;
 
+  /** Narrow shim of Foundry's global `ui` — only the notification toaster. */
+  const ui: {
+    notifications?: {
+      info(message: string): void;
+      warn(message: string): void;
+      error(message: string): void;
+    };
+  };
+
   namespace foundry {
     namespace applications {
       namespace api {

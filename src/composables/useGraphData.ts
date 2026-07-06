@@ -175,6 +175,9 @@ export function useGraphData(selection: GraphSelection, visibility: GraphVisibil
   /** Replace the whole graph from a freshly fetched list of characters. */
   function loadData(result: Character[]) {
     nodeList.value = result.map((c) => new CharacterNode(c));
+    // Reset before rebuilding — loadData also runs on refresh (e.g. after a
+    // Foundry document sync), and stale edges would duplicate.
+    edges.value = [];
     nodeList.value.forEach((n) => {
       n.characterData.knowCharacters.forEach((relation) => {
         edges.value.push(

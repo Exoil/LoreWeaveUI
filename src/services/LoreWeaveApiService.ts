@@ -95,6 +95,22 @@ export class LoreWeaveApiService {
     );
   }
 
+  /**
+   * Whether a character with the given id still exists on the backend.
+   * A 404 is a normal negative answer here, not a failure — probe with a
+   * service constructed **without** a notification service, or the
+   * interceptor will toast the 404.
+   */
+  public async characterExistsAsync(id: string, signal?: AbortSignal): Promise<boolean> {
+    try {
+      await this._loreWeaveApiClient.getCharacterById(id, signal);
+      return true;
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 404) return false;
+      throw error;
+    }
+  }
+
   /** Rename a character; `updateCharacter.version` (ETag) guards concurrent edits. */
   public async updateCharacterAsync(updateCharacter: UpdateCharacter, signal?: AbortSignal) {
     const modelToUpdate = new UpdateCharacterDto({

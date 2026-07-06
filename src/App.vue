@@ -6,12 +6,14 @@
  * This component just news up the API service, loads the initial data, holds the
  * modal open/close flags, and wires composables ↔ child components.
  */
-import { ref, computed, onBeforeMount, onMounted, inject } from 'vue';
+import { ref, computed, onBeforeMount, onMounted, onBeforeUnmount, inject } from 'vue';
 import {
   API_BASE_URL_KEY,
   GRAPH_LAYOUT_STORAGE_KEY,
   GRAPH_LAYOUT_SYNC_KEY,
+  GRAPH_REFRESH_KEY,
   GRAPH_VISIBILITY_HOST_KEY,
+  SYSTEM_CHARACTER_ID_KEY,
 } from '@/foundry/injection-keys';
 import { MODULE_ID } from '@/foundry/constants';
 import { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
@@ -171,6 +173,14 @@ const selectedEdgeIsFactEdge = computed<boolean>(() =>
 const selectedCharacterIsHidden = computed<boolean>(() =>
   firstSelectedNodeId.value ? visibility.isHidden(firstSelectedNodeId.value) : false,
 );
+// The hidden system character anchors handout-facts (see foundry/
+// document-sync) — deleting, renaming or revealing it would break that
+// contract, so its node menu disables those actions.
+const getSystemCharacterId = inject(SYSTEM_CHARACTER_ID_KEY, () => '');
+const selectedCharacterIsProtected = computed<boolean>(() => {
+  const systemCharacterId = getSystemCharacterId();
+  return !!systemCharacterId && firstSelectedNodeId.value === systemCharacterId;
+});
 const selectedFactIsHidden = computed<boolean>(() =>
   selectedFactNodeId.value ? visibility.isHidden(selectedFactNodeId.value) : false,
 );
@@ -185,7 +195,7 @@ const selectedEdgeIsHiddenViaNode = computed<boolean>(
     (selectedEdgeToId.value ? visibility.isHidden(selectedEdgeToId.value) : false),
 );
 function toggleSelectedCharacterVisibility() {
-  if (!firstSelectedNodeId.value) return;
+  if (!firstSelectedNodeId.value || selectedCharacterIsProtected.value) return;
   visibility.toggleVisibility(firstSelectedNodeId.value);
 }
 function toggleSelectedFactVisibility() {
@@ -201,11 +211,34 @@ onBeforeMount(() => {
   loreWeaveApiService = new LoreWeaveApiService(apiBaseUrl, notificationService);
 });
 
-onMounted(async () => {
-  const controller = new AbortController();
+// Initial load + re-fetch whenever the host signals the backend data changed
+// (the GM's client synced a Foundry actor/journal — see foundry/document-sync).
+const graphRefreshSource = inject(GRAPH_REFRESH_KEY, null);
+let loadController: AbortController | null = null;
+let unsubscribeGraphRefresh: (() => void) | null = null;
+
+async function loadGraphData() {
+  loadController?.abort();
+  loadController = new AbortController();
   const pageQuery = new PageQuery(1, 10, 'name', 'Asc');
-  const result = await loreWeaveApiService.getCharactersAsync(pageQuery, controller.signal);
-  graph.loadData(result);
+  try {
+    const result = await loreWeaveApiService.getCharactersAsync(pageQuery, loadController.signal);
+    graph.loadData(result);
+  } catch (error) {
+    // A newer refresh aborted this one — the newer request owns the graph.
+    if (error instanceof Error && error.name === 'CanceledError') return;
+    throw error;
+  }
+}
+
+onMounted(async () => {
+  unsubscribeGraphRefresh = graphRefreshSource?.subscribe(() => void loadGraphData()) ?? null;
+  await loadGraphData();
+});
+
+onBeforeUnmount(() => {
+  unsubscribeGraphRefresh?.();
+  loadController?.abort();
 });
 
 // --- Modal open/close state ----------------------------------------------
@@ -228,7 +261,7 @@ function openCreateKnowEdgeDialog() {
 const updateNodeCharacterNodeModal = ref(false);
 function openUpdateDialog() {
   if (!visibility.isGameMaster) return;
-  if (!firstSelectedNodeId.value) return;
+  if (!firstSelectedNodeId.value || selectedCharacterIsProtected.value) return;
   updateNodeCharacterNodeModal.value = true;
 }
 
@@ -334,6 +367,7 @@ function openKnowEdgeDetailsDialog(edgeId: string) {
       :secondSelectedCharacterId="secondSelectedNodeId"
       :isGameMaster="visibility.isGameMaster"
       :isCharacterHidden="selectedCharacterIsHidden"
+      :isProtectedCharacter="selectedCharacterIsProtected"
       @openUpdateCharacterDialog="openUpdateDialog"
       @openFindPathDialog="openFindPathDialog"
       @openCreateKnowEdgeDialog="openCreateKnowEdgeDialog"

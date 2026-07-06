@@ -39,6 +39,21 @@ function makeGraph(isGameMaster: boolean, saved: HiddenGraphItems | null = null)
   return { graph, visibility };
 }
 
+describe('useGraphData loadData', () => {
+  it('reloading replaces the graph instead of duplicating edges', () => {
+    const { graph } = makeGraph(true);
+
+    // Second load with the same data (e.g. refresh after a Foundry sync).
+    loadSampleGraph(graph);
+
+    expect(graph.edges.value).toHaveLength(1);
+    expect(Object.keys(graph.edgesForGraph.value).sort()).toEqual([
+      'char-1_char-2',
+      'char-1_fact-1',
+    ]);
+  });
+});
+
 describe('useGraphData × visibility (GM view)', () => {
   it('keeps hidden nodes and edges, flagged isHidden, for the GM', () => {
     const { graph } = makeGraph(true, { keys: ['char-2', 'char-1_fact-1'] });

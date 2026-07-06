@@ -31,6 +31,7 @@ function defaultProps(overrides = {}) {
     secondSelectedCharacterId: null,
     isGameMaster: true,
     isCharacterHidden: false,
+    isProtectedCharacter: false,
     ...overrides,
   };
 }
@@ -176,6 +177,25 @@ describe('NodeContextMenuComponent', () => {
     });
 
     expect(wrapper.find('#node-context-toggle-visibility-button').exists()).toBe(false);
+  });
+
+  it('the protected system character cannot be renamed, deleted or revealed', async () => {
+    const wrapper = mount(NodeContextMenuComponent, {
+      props: defaultProps({ isProtectedCharacter: true }),
+    });
+    (wrapper.vm as unknown as ExposedNodeMenu).showNodeContextMenu(makeNodeEvent());
+    await nextTick();
+
+    const updateButton = wrapper.find<HTMLButtonElement>('#node-context-update-character-button');
+    const deleteButton = wrapper.find<HTMLButtonElement>('#delete-character-button');
+    const toggleButton = wrapper.find<HTMLButtonElement>('#node-context-toggle-visibility-button');
+    expect(updateButton.element.disabled).toBe(true);
+    expect(deleteButton.element.disabled).toBe(true);
+    expect(toggleButton.element.disabled).toBe(true);
+    expect(toggleButton.text()).toBe('Always hidden (system)');
+
+    await toggleButton.trigger('click');
+    expect(wrapper.emitted('toggleCharacterVisibility')).toBeUndefined();
   });
 
   it('players only get the find-path action — data management is GM-only', () => {
