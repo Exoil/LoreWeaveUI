@@ -24,13 +24,13 @@ function makeViewEvent(x = 100, y = 200): ViewEvent<MouseEvent> {
 
 describe('ViewContextMenuComponent', () => {
   it('menu is hidden by default', () => {
-    const wrapper = mount(ViewContextMenuComponent);
+    const wrapper = mount(ViewContextMenuComponent, { props: { isGameMaster: true } });
 
     expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
   });
 
   it('showViewContextMenu opens the menu at the click position', async () => {
-    const wrapper = mount(ViewContextMenuComponent);
+    const wrapper = mount(ViewContextMenuComponent, { props: { isGameMaster: true } });
 
     (wrapper.vm as { showViewContextMenu: (p: ViewEvent<MouseEvent>) => void }).showViewContextMenu(
       makeViewEvent(150, 250),
@@ -44,7 +44,7 @@ describe('ViewContextMenuComponent', () => {
   });
 
   it('hideMenu closes the menu', async () => {
-    const wrapper = mount(ViewContextMenuComponent);
+    const wrapper = mount(ViewContextMenuComponent, { props: { isGameMaster: true } });
     (wrapper.vm as { showViewContextMenu: (p: ViewEvent<MouseEvent>) => void }).showViewContextMenu(
       makeViewEvent(),
     );
@@ -57,7 +57,7 @@ describe('ViewContextMenuComponent', () => {
   });
 
   it('clicking Create character emits openCreateCharacterDialog', async () => {
-    const wrapper = mount(ViewContextMenuComponent);
+    const wrapper = mount(ViewContextMenuComponent, { props: { isGameMaster: true } });
     (wrapper.vm as { showViewContextMenu: (p: ViewEvent<MouseEvent>) => void }).showViewContextMenu(
       makeViewEvent(),
     );
@@ -69,13 +69,24 @@ describe('ViewContextMenuComponent', () => {
   });
 
   it('clicking Create character closes the menu', async () => {
-    const wrapper = mount(ViewContextMenuComponent);
+    const wrapper = mount(ViewContextMenuComponent, { props: { isGameMaster: true } });
     (wrapper.vm as { showViewContextMenu: (p: ViewEvent<MouseEvent>) => void }).showViewContextMenu(
       makeViewEvent(),
     );
     await nextTick();
 
     await wrapper.find('button.dropdown-item').trigger('click');
+
+    expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
+  });
+
+  it('does not open for players — creating characters is GM-only', async () => {
+    const wrapper = mount(ViewContextMenuComponent, { props: { isGameMaster: false } });
+
+    (wrapper.vm as { showViewContextMenu: (p: ViewEvent<MouseEvent>) => void }).showViewContextMenu(
+      makeViewEvent(),
+    );
+    await nextTick();
 
     expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
   });

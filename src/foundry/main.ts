@@ -7,6 +7,7 @@
 import { LoreWeaveApp } from './LoreWeaveApp';
 import { MODULE_ID } from './constants';
 import { GRAPH_LAYOUT_SETTING } from './graph-layout-storage';
+import { HIDDEN_GRAPH_ITEMS_SETTING } from './graph-visibility-host';
 
 export { MODULE_ID };
 
@@ -71,10 +72,20 @@ Hooks.once('init', () => {
     default: 'http://localhost:8080',
   });
 
-  // Cached graph node positions (per-user UI preference, hidden from the
-  // settings sheet). Written by the layout cache when the window closes.
+  // Cached graph node positions, hidden from the settings sheet. World scope:
+  // the GM's arrangement is canonical for everyone — the layout cache writes
+  // it when the GM closes the window, players only read it.
   game.settings.register(MODULE_ID, GRAPH_LAYOUT_SETTING, {
-    scope: 'client',
+    scope: 'world',
+    config: false,
+    type: Object,
+    default: null,
+  });
+
+  // Nodes/edges the GM hid from players. World scope: only the GM can write
+  // it, players read it, and Foundry syncs changes to connected clients.
+  game.settings.register(MODULE_ID, HIDDEN_GRAPH_ITEMS_SETTING, {
+    scope: 'world',
     config: false,
     type: Object,
     default: null,

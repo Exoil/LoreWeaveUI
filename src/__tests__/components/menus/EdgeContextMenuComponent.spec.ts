@@ -23,6 +23,8 @@ function defaultProps(overrides = {}) {
     selectedEdgeId: 'char-1_char-2',
     edgeIdSeparator: '_',
     isFactEdge: false,
+    isGameMaster: true,
+    isEdgeHidden: false,
     ...overrides,
   };
 }
@@ -142,6 +144,54 @@ describe('EdgeContextMenuComponent', () => {
       expect.anything(),
     );
     expect(wrapper.emitted('deleteFactEdgeFromMenu')).toEqual([['char-1_fact-1']]);
+    expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
+  });
+
+  it('hide from players emits toggleEdgeVisibility and closes the menu', async () => {
+    const wrapper = mount(EdgeContextMenuComponent, { props: defaultProps() });
+    (wrapper.vm as unknown as ExposedEdgeMenu).showEdgeContextMenu(makeEdgeEvent());
+    await nextTick();
+
+    const button = wrapper.find('#edge-context-toggle-visibility-button');
+    expect(button.text()).toBe('Hide from players');
+    await button.trigger('click');
+
+    expect(wrapper.emitted('toggleEdgeVisibility')).toHaveLength(1);
+    expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
+  });
+
+  it('a hidden edge offers "Show for players" instead', () => {
+    const wrapper = mount(EdgeContextMenuComponent, {
+      props: defaultProps({ isEdgeHidden: true }),
+    });
+
+    expect(wrapper.find('#edge-context-toggle-visibility-button').text()).toBe('Show for players');
+  });
+
+  it('the visibility toggle is also available for fact edges', () => {
+    const wrapper = mount(EdgeContextMenuComponent, {
+      props: defaultProps({ selectedEdgeId: 'char-1_fact-1', isFactEdge: true }),
+    });
+
+    expect(wrapper.find('#edge-context-toggle-visibility-button').exists()).toBe(true);
+  });
+
+  it('players do not get the visibility toggle at all', () => {
+    const wrapper = mount(EdgeContextMenuComponent, {
+      props: defaultProps({ isGameMaster: false }),
+    });
+
+    expect(wrapper.find('#edge-context-toggle-visibility-button').exists()).toBe(false);
+  });
+
+  it('does not open for players — every edge action is GM-only', async () => {
+    const wrapper = mount(EdgeContextMenuComponent, {
+      props: defaultProps({ isGameMaster: false }),
+    });
+
+    (wrapper.vm as unknown as ExposedEdgeMenu).showEdgeContextMenu(makeEdgeEvent());
+    await nextTick();
+
     expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
   });
 });

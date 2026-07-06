@@ -15,12 +15,15 @@ const { menuEl, isOpen, pos, showContextMenu, hideMenu } = useContextMenu();
 const props = defineProps<{
   loreWeaveApiService: LoreWeaveApiService;
   selectedFactId: string | null;
+  isGameMaster: boolean;
+  isFactHidden: boolean;
 }>();
 
 const emit = defineEmits<{
   openUpdateFactDialog: [];
   openConnectFactDialog: [];
   deletedFactFromMenu: [deletedFactId: string];
+  toggleFactVisibility: [];
 }>();
 
 function onUpdateClick() {
@@ -40,8 +43,19 @@ function onFactDeleted(deletedFactId: string) {
   hideMenu();
 }
 
-/** Open the menu at the node event (suppressing the browser's native menu). */
+function onToggleVisibilityClick() {
+  if (!props.selectedFactId) return;
+  emit('toggleFactVisibility');
+  hideMenu();
+}
+
+/**
+ * Open the menu at the node event (suppressing the browser's native menu).
+ * Every action here mutates data, so for players this is a no-op (facts stay
+ * readable via tooltip and double-click details).
+ */
 function showFactNodeContextMenu(params: vNG.NodeEvent<MouseEvent>) {
+  if (!props.isGameMaster) return;
   const { event } = params;
   event.stopPropagation();
   event.preventDefault();
@@ -91,6 +105,17 @@ defineExpose({
               @deletedFact="onFactDeleted"
             />
           </div>
+
+          <button
+            v-if="isGameMaster"
+            id="fact-context-toggle-visibility-button"
+            class="dropdown-item"
+            type="button"
+            @click="onToggleVisibilityClick"
+            :disabled="!selectedFactId"
+          >
+            {{ isFactHidden ? 'Show for players' : 'Hide from players' }}
+          </button>
         </div>
       </div>
     </div>

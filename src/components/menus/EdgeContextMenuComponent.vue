@@ -19,12 +19,15 @@ const props = defineProps<{
   selectedEdgeId: string | undefined;
   edgeIdSeparator: string;
   isFactEdge: boolean;
+  isGameMaster: boolean;
+  isEdgeHidden: boolean;
 }>();
 
 const emit = defineEmits<{
   openUpdateKnowEdgeDialog: [];
   deleteKnowEdgeFromMenu: [createdEdgeId: string];
   deleteFactEdgeFromMenu: [deletedEdgeId: string];
+  toggleEdgeVisibility: [];
 }>();
 
 function onUpdateClick() {
@@ -43,8 +46,19 @@ function onFactEdgeDeleted(deletedEdgeId: string) {
   hideMenu();
 }
 
-/** Open the menu at the edge event (suppressing the browser's native menu). */
+function onToggleVisibilityClick() {
+  if (!props.selectedEdgeId) return;
+  emit('toggleEdgeVisibility');
+  hideMenu();
+}
+
+/**
+ * Open the menu at the edge event (suppressing the browser's native menu).
+ * Every action here mutates data, so for players this is a no-op (relations
+ * stay readable via double-click details).
+ */
 function showEdgeContextMenu(params: vNG.EdgeEvent<MouseEvent>) {
+  if (!props.isGameMaster) return;
   const { event } = params;
   event.stopPropagation();
   event.preventDefault();
@@ -94,6 +108,17 @@ defineExpose({
               @deletedFactEdge="onFactEdgeDeleted"
             />
           </div>
+
+          <button
+            v-if="isGameMaster"
+            id="edge-context-toggle-visibility-button"
+            class="dropdown-item"
+            type="button"
+            @click="onToggleVisibilityClick"
+            :disabled="!selectedEdgeId"
+          >
+            {{ isEdgeHidden ? 'Show for players' : 'Hide from players' }}
+          </button>
         </div>
       </div>
     </div>

@@ -26,6 +26,16 @@ declare global {
       format(key: string, data: Record<string, unknown>): string;
     };
     user?: { isGM: boolean; id: string };
+    /**
+     * Foundry's socket.io socket. Module messages travel on the
+     * `module.<module-id>` event (requires `"socket": true` in module.json);
+     * `emit` broadcasts to every *other* connected client.
+     */
+    socket?: {
+      emit(event: string, data: unknown): void;
+      on(event: string, cb: (data: unknown) => void): void;
+      off(event: string, cb: (data: unknown) => void): void;
+    };
   }
 
   const game: FoundryGame;

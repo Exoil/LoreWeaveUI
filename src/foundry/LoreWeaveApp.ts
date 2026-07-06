@@ -7,8 +7,15 @@ import RootComponent from '@/App.vue';
 import router from '@/router';
 
 import { MODULE_ID } from './constants';
-import { API_BASE_URL_KEY, GRAPH_LAYOUT_STORAGE_KEY } from './injection-keys';
+import {
+  API_BASE_URL_KEY,
+  GRAPH_LAYOUT_STORAGE_KEY,
+  GRAPH_LAYOUT_SYNC_KEY,
+  GRAPH_VISIBILITY_HOST_KEY,
+} from './injection-keys';
 import { createSettingsGraphLayoutStorage } from './graph-layout-storage';
+import { createSettingsGraphVisibilityHost } from './graph-visibility-host';
+import { createSocketGraphLayoutSyncChannel } from './graph-layout-sync';
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -72,6 +79,8 @@ export class LoreWeaveApp extends ApplicationV2 {
     this.vueApp.use(router).use(VNetworkGraph);
     this.vueApp.provide(API_BASE_URL_KEY, this.apiBaseUrl);
     this.vueApp.provide(GRAPH_LAYOUT_STORAGE_KEY, createSettingsGraphLayoutStorage());
+    this.vueApp.provide(GRAPH_VISIBILITY_HOST_KEY, createSettingsGraphVisibilityHost());
+    this.vueApp.provide(GRAPH_LAYOUT_SYNC_KEY, createSocketGraphLayoutSyncChannel());
     this.vueApp.mount(host);
   }
 
