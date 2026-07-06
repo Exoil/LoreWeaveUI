@@ -1,11 +1,12 @@
 import { onScopeDispose, ref } from 'vue';
 
-/** The persisted shape of the GM's hidden graph items. */
+/**
+ * The persisted shape of the GM's hidden graph items: the {@link GraphElement}
+ * keys of everything hidden — node ids and edge keys share one namespace
+ * (edge keys always contain the separator, node ids never do).
+ */
 export interface HiddenGraphItems {
-  /** Ids of hidden character/fact nodes. */
-  nodeIds: string[];
-  /** Directed edge keys (`<from><sep><to>`) of individually hidden edges. */
-  edgeKeys: string[];
+  keys: string[];
 }
 
 /**
@@ -45,39 +46,50 @@ export function createLocalStorageGraphVisibilityHost(storageKey: string): Graph
   };
 }
 
-/** Narrow an untrusted persisted value into {@link HiddenGraphItems}, or `null`. */
+/**
+ * Narrow an untrusted persisted value into {@link HiddenGraphItems}, or `null`.
+ * Also accepts the legacy `{ nodeIds, edgeKeys }` shape written by earlier
+ * builds of this branch, folding both lists into the unified key set.
+ */
 export function parseHiddenGraphItems(value: unknown): HiddenGraphItems | null {
   if (!value || typeof value !== 'object') return null;
-  const { nodeIds, edgeKeys } = value as { nodeIds?: unknown; edgeKeys?: unknown };
-  if (!Array.isArray(nodeIds) || !Array.isArray(edgeKeys)) return null;
-  return {
-    nodeIds: nodeIds.filter((v): v is string => typeof v === 'string'),
-    edgeKeys: edgeKeys.filter((v): v is string => typeof v === 'string'),
+  const { keys, nodeIds, edgeKeys } = value as {
+    keys?: unknown;
+    nodeIds?: unknown;
+    edgeKeys?: unknown;
   };
+  if (Array.isArray(keys)) {
+    return { keys: keys.filter((v): v is string => typeof v === 'string') };
+  }
+  if (Array.isArray(nodeIds) && Array.isArray(edgeKeys)) {
+    return {
+      keys: [...nodeIds, ...edgeKeys].filter((v): v is string => typeof v === 'string'),
+    };
+  }
+  return null;
 }
 
 /**
- * Owns which nodes and edges the GM has hidden from players. The GM still sees
- * hidden items (rendered faded by useGraphConfiguration); players never receive
- * them (useGraphData filters them out of the projected nodes/edges).
+ * Owns which graph elements the GM has hidden from players, addressed by
+ * their {@link GraphElement} key — one API for character nodes, fact nodes
+ * and edges alike. The GM still sees hidden items (rendered faded by
+ * useGraphConfiguration); players never receive them (useGraphData filters
+ * them out of the projected nodes/edges).
  *
- * Only the game master can toggle visibility — for players the toggle
- * functions are no-ops, and the Foundry world-scoped setting refuses non-GM
- * writes anyway.
+ * Only the game master can toggle visibility — for players the toggle is a
+ * no-op, and the Foundry world-scoped setting refuses non-GM writes anyway.
  *
  * @param host role + persistence provided by the hosting environment
  *   (see {@link GraphVisibilityHost}).
  */
 export function useGraphVisibility(host: GraphVisibilityHost) {
   const isGameMaster = host.isGameMaster;
-  const hiddenNodeIds = ref<Set<string>>(new Set());
-  const hiddenEdgeKeys = ref<Set<string>>(new Set());
+  const hiddenKeys = ref<Set<string>>(new Set());
 
-  // Sets are replaced (not mutated) on every change so reactivity is driven by
-  // plain ref reassignment.
+  // The set is replaced (not mutated) on every change so reactivity is driven
+  // by plain ref reassignment.
   function apply(items: HiddenGraphItems): void {
-    hiddenNodeIds.value = new Set(items.nodeIds);
-    hiddenEdgeKeys.value = new Set(items.edgeKeys);
+    hiddenKeys.value = new Set(items.keys);
   }
 
   const saved = host.load();
@@ -88,48 +100,28 @@ export function useGraphVisibility(host: GraphVisibilityHost) {
   onScopeDispose(() => unsubscribe?.());
 
   function persist(): void {
-    host.save({
-      nodeIds: [...hiddenNodeIds.value],
-      edgeKeys: [...hiddenEdgeKeys.value],
-    });
+    host.save({ keys: [...hiddenKeys.value] });
   }
 
-  /** Whether the given character/fact node is hidden from players. */
-  function isNodeHidden(id: string): boolean {
-    return hiddenNodeIds.value.has(id);
+  /** Whether the element with the given {@link GraphElement} key is hidden from players. */
+  function isHidden(key: string): boolean {
+    return hiddenKeys.value.has(key);
   }
 
-  /** Whether the given edge key (`<from><sep><to>`) is individually hidden from players. */
-  function isEdgeHidden(edgeKey: string): boolean {
-    return hiddenEdgeKeys.value.has(edgeKey);
-  }
-
-  /** GM only: hide the node if visible, show it if hidden. */
-  function toggleNodeVisibility(id: string): void {
+  /** GM only: hide the element if visible, show it if hidden. */
+  function toggleVisibility(key: string): void {
     if (!isGameMaster) return;
-    const next = new Set(hiddenNodeIds.value);
-    if (!next.delete(id)) next.add(id);
-    hiddenNodeIds.value = next;
-    persist();
-  }
-
-  /** GM only: hide the edge if visible, show it if hidden. */
-  function toggleEdgeVisibility(edgeKey: string): void {
-    if (!isGameMaster) return;
-    const next = new Set(hiddenEdgeKeys.value);
-    if (!next.delete(edgeKey)) next.add(edgeKey);
-    hiddenEdgeKeys.value = next;
+    const next = new Set(hiddenKeys.value);
+    if (!next.delete(key)) next.add(key);
+    hiddenKeys.value = next;
     persist();
   }
 
   return {
     isGameMaster,
-    hiddenNodeIds,
-    hiddenEdgeKeys,
-    isNodeHidden,
-    isEdgeHidden,
-    toggleNodeVisibility,
-    toggleEdgeVisibility,
+    hiddenKeys,
+    isHidden,
+    toggleVisibility,
   };
 }
 

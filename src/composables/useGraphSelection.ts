@@ -1,13 +1,11 @@
 import { computed } from 'vue';
 import { ref } from 'vue';
+import { EDGE_ID_SEPARATOR } from '@/models/GraphEdge';
 
-/**
- * Separator used to encode an edge id as `<fromId><sep><toId>`.
- * The graph identifies an edge by a single string, so the two endpoint
- * character ids are joined with this separator and split back out when a
- * relation needs to be addressed by its from/to ids.
- */
-export const EDGE_ID_SEPARATOR = '_';
+// The separator lives with the edge model (its `key` is built from it);
+// re-exported here because the selection API is where consumers historically
+// import it from.
+export { EDGE_ID_SEPARATOR };
 
 export interface UseGraphSelectionOptions {
   /**

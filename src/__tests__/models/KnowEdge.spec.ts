@@ -28,4 +28,10 @@ describe('KnowEdge', () => {
 
     expect(edge.source).not.toBe(edge.target);
   });
+
+  it('key encodes the endpoints (shared GraphElement identity)', () => {
+    const edge = new KnowEdge('char-1', 'char-2');
+
+    expect(edge.key).toBe('char-1_char-2');
+  });
 });

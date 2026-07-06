@@ -169,32 +169,32 @@ const selectedEdgeIsFactEdge = computed<boolean>(() =>
 // Hidden flags for whatever is currently selected drive the menu labels
 // ("Hide from players" / "Show for players"); the toggles flip persistence.
 const selectedCharacterIsHidden = computed<boolean>(() =>
-  firstSelectedNodeId.value ? visibility.isNodeHidden(firstSelectedNodeId.value) : false,
+  firstSelectedNodeId.value ? visibility.isHidden(firstSelectedNodeId.value) : false,
 );
 const selectedFactIsHidden = computed<boolean>(() =>
-  selectedFactNodeId.value ? visibility.isNodeHidden(selectedFactNodeId.value) : false,
+  selectedFactNodeId.value ? visibility.isHidden(selectedFactNodeId.value) : false,
 );
 const selectedEdgeIsHidden = computed<boolean>(() =>
-  selectedEdgeId.value ? visibility.isEdgeHidden(selectedEdgeId.value) : false,
+  selectedEdgeId.value ? visibility.isHidden(selectedEdgeId.value) : false,
 );
 // An edge with a hidden endpoint is hidden *by the node* — its own toggle
 // would do nothing, so the menu disables it instead of offering a lie.
 const selectedEdgeIsHiddenViaNode = computed<boolean>(
   () =>
-    (selectedEdgeFromId.value ? visibility.isNodeHidden(selectedEdgeFromId.value) : false) ||
-    (selectedEdgeToId.value ? visibility.isNodeHidden(selectedEdgeToId.value) : false),
+    (selectedEdgeFromId.value ? visibility.isHidden(selectedEdgeFromId.value) : false) ||
+    (selectedEdgeToId.value ? visibility.isHidden(selectedEdgeToId.value) : false),
 );
 function toggleSelectedCharacterVisibility() {
   if (!firstSelectedNodeId.value) return;
-  visibility.toggleNodeVisibility(firstSelectedNodeId.value);
+  visibility.toggleVisibility(firstSelectedNodeId.value);
 }
 function toggleSelectedFactVisibility() {
   if (!selectedFactNodeId.value) return;
-  visibility.toggleNodeVisibility(selectedFactNodeId.value);
+  visibility.toggleVisibility(selectedFactNodeId.value);
 }
 function toggleSelectedEdgeVisibility() {
   if (!selectedEdgeId.value) return;
-  visibility.toggleEdgeVisibility(selectedEdgeId.value);
+  visibility.toggleVisibility(selectedEdgeId.value);
 }
 
 onBeforeMount(() => {

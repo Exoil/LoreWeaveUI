@@ -31,8 +31,7 @@ export function createSettingsGraphVisibilityHost(): GraphVisibilityHost {
         // holds the new value — re-read it instead of parsing the raw document.
         onChange(
           parseHiddenGraphItems(game.settings.get(MODULE_ID, HIDDEN_GRAPH_ITEMS_SETTING)) ?? {
-            nodeIds: [],
-            edgeKeys: [],
+            keys: [],
           },
         );
       });

@@ -10,7 +10,8 @@ import type { VersionedCharacter } from '@/services/Models/VersionedCharacter';
 import type { VersionedKnowRelation } from '@/services/Models/VersionedKnowRelation';
 import type { Fact } from '@/services/Models/Fact';
 import type { VersionedFact } from '@/services/Models/VersionedFact';
-import { EDGE_ID_SEPARATOR, type GraphSelection } from './useGraphSelection';
+import { buildEdgeKey, EDGE_ID_SEPARATOR, type GraphEdge } from '@/models/GraphEdge';
+import type { GraphSelection } from './useGraphSelection';
 import type { GraphVisibility } from './useGraphVisibility';
 
 // Edge labels only show the opening of the description so long relation notes
@@ -55,8 +56,7 @@ export function useGraphData(selection: GraphSelection, visibility: GraphVisibil
 
   /** The know-relation edge behind a graph edge id, or `undefined` (e.g. fact edges). */
   function getKnowEdgeById(edgeId: string): KnowEdge | undefined {
-    const [source, target] = edgeId.split(EDGE_ID_SEPARATOR);
-    return edges.value.find((e) => e.source === source && e.target === target);
+    return edges.value.find((e) => e.key === edgeId);
   }
 
   /** A character's display name by node id, or `undefined` for unknown/fact ids. */
@@ -77,20 +77,23 @@ export function useGraphData(selection: GraphSelection, visibility: GraphVisibil
   const highlightedEdgeKeys = computed<Set<string>>(() => {
     const keys = new Set<string>();
     for (let i = 0; i < pathCharacterIds.value.length - 1; i++) {
-      keys.add(pathCharacterIds.value[i]! + EDGE_ID_SEPARATOR + pathCharacterIds.value[i + 1]!);
+      keys.add(buildEdgeKey(pathCharacterIds.value[i]!, pathCharacterIds.value[i + 1]!));
     }
     return keys;
   });
 
   // An edge disappears with either endpoint: hiding a character also hides its
   // relations and fact connections for players, without touching the edge set.
-  function isEdgeHiddenFromPlayers(edgeKey: string, source: string, target: string): boolean {
+  function isEdgeHiddenFromPlayers(edge: GraphEdge): boolean {
     return (
-      visibility.isEdgeHidden(edgeKey) ||
-      visibility.isNodeHidden(source) ||
-      visibility.isNodeHidden(target)
+      visibility.isHidden(edge.key) ||
+      visibility.isHidden(edge.source) ||
+      visibility.isHidden(edge.target)
     );
   }
+
+  // Players never receive hidden elements; the GM keeps them (rendered faded).
+  const includeForUser = (hidden: boolean) => visibility.isGameMaster || !hidden;
 
   /**
    * Character + fact nodes shaped for <v-network-graph>, with selection/highlight
@@ -100,7 +103,7 @@ export function useGraphData(selection: GraphSelection, visibility: GraphVisibil
   const nodesForGraph = computed<vNG.Nodes>(() =>
     Object.fromEntries([
       ...nodeList.value
-        .filter((n) => visibility.isGameMaster || !visibility.isNodeHidden(n.id))
+        .filter((n) => includeForUser(visibility.isHidden(n.key)))
         .map((n) => [
           n.id,
           {
@@ -108,18 +111,18 @@ export function useGraphData(selection: GraphSelection, visibility: GraphVisibil
             highlighted: highlightedNodeIds.value.has(n.id),
             isFirstSelected: selection.firstSelectedNodeId.value === n.id,
             isSecondSelected: selection.secondSelectedNodeId.value === n.id,
-            isHidden: visibility.isNodeHidden(n.id),
+            isHidden: visibility.isHidden(n.key),
           },
         ]),
       ...factNodeList.value
-        .filter((f) => visibility.isGameMaster || !visibility.isNodeHidden(f.id))
+        .filter((f) => includeForUser(visibility.isHidden(f.key)))
         .map((f) => [
           f.id,
           {
             name: f.name,
             isFact: true,
             isFactSelected: selection.selectedFactNodeId.value === f.id,
-            isHidden: visibility.isNodeHidden(f.id),
+            isHidden: visibility.isHidden(f.key),
           },
         ]),
     ]),
@@ -133,13 +136,8 @@ export function useGraphData(selection: GraphSelection, visibility: GraphVisibil
   const edgesForGraph = computed<vNG.Edges>(() =>
     Object.fromEntries([
       ...edges.value
-        .filter(
-          (e) =>
-            visibility.isGameMaster ||
-            !isEdgeHiddenFromPlayers(e.source + EDGE_ID_SEPARATOR + e.target, e.source, e.target),
-        )
+        .filter((e) => includeForUser(isEdgeHiddenFromPlayers(e)))
         .map((e) => {
-          const key = e.source + EDGE_ID_SEPARATOR + e.target;
           const first = selection.firstSelectedNodeId.value;
           const second = selection.secondSelectedNodeId.value;
           const connectsSelected =
@@ -148,36 +146,29 @@ export function useGraphData(selection: GraphSelection, visibility: GraphVisibil
             ((e.source === first && e.target === second) ||
               (e.source === second && e.target === first));
           return [
-            key,
+            e.key,
             {
               source: e.source,
               target: e.target,
-              highlighted: highlightedEdgeKeys.value.has(key),
+              highlighted: highlightedEdgeKeys.value.has(e.key),
               connectsSelected,
               isStrong: e.isStrongRelation,
               label: truncateDescription(e.description),
-              isHidden: isEdgeHiddenFromPlayers(key, e.source, e.target),
+              isHidden: isEdgeHiddenFromPlayers(e),
             },
           ];
         }),
       ...factEdges.value
-        .filter(
-          (e) =>
-            visibility.isGameMaster ||
-            !isEdgeHiddenFromPlayers(e.source + EDGE_ID_SEPARATOR + e.target, e.source, e.target),
-        )
-        .map((e) => {
-          const key = e.source + EDGE_ID_SEPARATOR + e.target;
-          return [
-            key,
-            {
-              source: e.source,
-              target: e.target,
-              isFactEdge: true,
-              isHidden: isEdgeHiddenFromPlayers(key, e.source, e.target),
-            },
-          ];
-        }),
+        .filter((e) => includeForUser(isEdgeHiddenFromPlayers(e)))
+        .map((e) => [
+          e.key,
+          {
+            source: e.source,
+            target: e.target,
+            isFactEdge: true,
+            isHidden: isEdgeHiddenFromPlayers(e),
+          },
+        ]),
     ]),
   );
 
