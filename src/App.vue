@@ -7,12 +7,18 @@
  * modal open/close flags, and wires composables ↔ child components.
  */
 import { ref, computed, onBeforeMount, onMounted, inject } from 'vue';
-import { API_BASE_URL_KEY, GRAPH_LAYOUT_STORAGE_KEY } from '@/foundry/injection-keys';
+import {
+  API_BASE_URL_KEY,
+  GRAPH_LAYOUT_STORAGE_KEY,
+  GRAPH_LAYOUT_SYNC_KEY,
+  GRAPH_VISIBILITY_HOST_KEY,
+} from '@/foundry/injection-keys';
 import { MODULE_ID } from '@/foundry/constants';
 import { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { NotificationService } from '@/services/NotificationService';
 import { PageQuery } from '@/services/Models/PageQuery';
 import NotificationListComponent from '@/components/NotificationListComponent.vue';
+import GraphLegendComponent from '@/components/GraphLegendComponent.vue';
 import NodeContextMenuComponent from '@/components/menus/NodeContextMenuComponent.vue';
 import FactNodeContextMenuComponent from '@/components/menus/FactNodeContextMenuComponent.vue';
 import EdgeContextMenuComponent from '@/components/menus/EdgeContextMenuComponent.vue';
@@ -36,6 +42,11 @@ import {
 import { useGraphSelection, EDGE_ID_SEPARATOR } from '@/composables/useGraphSelection';
 import { useGraphData } from '@/composables/useGraphData';
 import {
+  useGraphVisibility,
+  createLocalStorageGraphVisibilityHost,
+} from '@/composables/useGraphVisibility';
+import { useGraphLayoutSync } from '@/composables/useGraphLayoutSync';
+import {
   useGraphInteractions,
   type NodeContextMenuApi,
   type FactNodeContextMenuApi,
@@ -56,7 +67,20 @@ const notificationService = new NotificationService();
 let loreWeaveApiService: LoreWeaveApiService;
 
 // --- Graph styling, state and behaviour (see src/composables) -------------
-const { graphConfiguration } = useGraphConfiguration();
+// GM-hidden nodes/edges + the user's role: the Foundry host injects a
+// world-setting-backed host (GM-writable, live-synced to players); standalone
+// falls back to localStorage with the user treated as GM.
+const visibilityHost = inject(
+  GRAPH_VISIBILITY_HOST_KEY,
+  () => createLocalStorageGraphVisibilityHost(`${MODULE_ID}:hidden-graph-items`),
+  true,
+);
+const visibility = useGraphVisibility(visibilityHost);
+
+// Players are view-only: no node dragging (the GM's layout is synced to them).
+const { graphConfiguration } = useGraphConfiguration({
+  canEditLayout: visibility.isGameMaster,
+});
 
 // Node positions survive close/reopen: the Foundry host injects a
 // game.settings-backed storage; standalone falls back to localStorage.
@@ -67,10 +91,21 @@ const layoutStorage = inject(
   true,
 );
 const { layouts } = useGraphLayoutCache(layoutStorage);
+
+// Live layout sync over the Foundry socket: the GM broadcasts after each drag
+// (wired to `node:dragend` below), players apply what arrives. Standalone SPA
+// has no other clients — the injected channel is null and sync is off.
+const layoutSyncChannel = inject(GRAPH_LAYOUT_SYNC_KEY, null);
+const { broadcastLayouts } = useGraphLayoutSync(
+  layouts,
+  layoutSyncChannel,
+  visibility.isGameMaster,
+);
+
 // The predicate closes over `graph` (created just below) lazily — it only runs
 // on user interaction, long after both composables exist.
 const selection = useGraphSelection({ isFactNodeId: (id) => graph.isFactNode(id) });
-const graph = useGraphData(selection);
+const graph = useGraphData(selection, visibility);
 
 // Context-menu component instances, opened by the interaction handlers.
 const nodeMenuRef = ref<NodeContextMenuApi | null>(null);
@@ -90,6 +125,7 @@ const { eventHandlers } = useGraphInteractions(
   {
     onFactNodeDoubleClicked: openFactDetailsDialog,
     onKnowEdgeDoubleClicked: openKnowEdgeDetailsDialog,
+    onNodeDragEnd: broadcastLayouts,
   },
 );
 
@@ -129,6 +165,31 @@ const selectedEdgeIsFactEdge = computed<boolean>(() =>
   selectedEdgeToId.value ? graph.isFactNode(selectedEdgeToId.value) : false,
 );
 
+// --- GM hide/show (context-menu wiring) ------------------------------------
+// Hidden flags for whatever is currently selected drive the menu labels
+// ("Hide from players" / "Show for players"); the toggles flip persistence.
+const selectedCharacterIsHidden = computed<boolean>(() =>
+  firstSelectedNodeId.value ? visibility.isNodeHidden(firstSelectedNodeId.value) : false,
+);
+const selectedFactIsHidden = computed<boolean>(() =>
+  selectedFactNodeId.value ? visibility.isNodeHidden(selectedFactNodeId.value) : false,
+);
+const selectedEdgeIsHidden = computed<boolean>(() =>
+  selectedEdgeId.value ? visibility.isEdgeHidden(selectedEdgeId.value) : false,
+);
+function toggleSelectedCharacterVisibility() {
+  if (!firstSelectedNodeId.value) return;
+  visibility.toggleNodeVisibility(firstSelectedNodeId.value);
+}
+function toggleSelectedFactVisibility() {
+  if (!selectedFactNodeId.value) return;
+  visibility.toggleNodeVisibility(selectedFactNodeId.value);
+}
+function toggleSelectedEdgeVisibility() {
+  if (!selectedEdgeId.value) return;
+  visibility.toggleEdgeVisibility(selectedEdgeId.value);
+}
+
 onBeforeMount(() => {
   loreWeaveApiService = new LoreWeaveApiService(apiBaseUrl, notificationService);
 });
@@ -142,25 +203,31 @@ onMounted(async () => {
 
 // --- Modal open/close state ----------------------------------------------
 // Each `open*` guard refuses to open a dialog without the selection it needs.
+// Dialogs that mutate data additionally refuse to open for players — the
+// GM-only menu items are their entry points, this is the second lock.
 const createDialogOpen = ref(false);
 function openCreateDialog() {
+  if (!visibility.isGameMaster) return;
   createDialogOpen.value = true;
 }
 
 const createKnowEdgeModalOpen = ref(false);
 function openCreateKnowEdgeDialog() {
+  if (!visibility.isGameMaster) return;
   if (!firstSelectedNodeId.value || !secondSelectedNodeId.value) return;
   createKnowEdgeModalOpen.value = true;
 }
 
 const updateNodeCharacterNodeModal = ref(false);
 function openUpdateDialog() {
+  if (!visibility.isGameMaster) return;
   if (!firstSelectedNodeId.value) return;
   updateNodeCharacterNodeModal.value = true;
 }
 
 const updateKnowEdgeModalOpen = ref(false);
 function openUpdateKnowEdgeDialog() {
+  if (!visibility.isGameMaster) return;
   if (!selectedEdgeFromId.value || !selectedEdgeToId.value) return;
   updateKnowEdgeModalOpen.value = true;
 }
@@ -173,12 +240,14 @@ function openFindPathDialog() {
 
 const createFactDialogOpen = ref(false);
 function openCreateFactDialog() {
+  if (!visibility.isGameMaster) return;
   if (!firstSelectedNodeId.value) return;
   createFactDialogOpen.value = true;
 }
 
 const updateFactDialogOpen = ref(false);
 function openUpdateFactDialog() {
+  if (!visibility.isGameMaster) return;
   if (!selectedFactNodeId.value) return;
   updateFactDialogOpen.value = true;
 }
@@ -190,6 +259,7 @@ const connectedCharacterIdsForSelectedFact = computed<string[]>(() =>
   selectedFactNodeId.value ? graph.getCharacterIdsConnectedToFact(selectedFactNodeId.value) : [],
 );
 function openConnectFactDialog() {
+  if (!visibility.isGameMaster) return;
   if (!selectedFactNodeId.value) return;
   connectFactDialogOpen.value = true;
 }
@@ -255,19 +325,25 @@ function openKnowEdgeDetailsDialog(edgeId: string) {
       :loreWeaveApiService="loreWeaveApiService"
       :firstSelectedCharacterId="firstSelectedNodeId"
       :secondSelectedCharacterId="secondSelectedNodeId"
+      :isGameMaster="visibility.isGameMaster"
+      :isCharacterHidden="selectedCharacterIsHidden"
       @openUpdateCharacterDialog="openUpdateDialog"
       @openFindPathDialog="openFindPathDialog"
       @openCreateKnowEdgeDialog="openCreateKnowEdgeDialog"
       @openCreateFactDialog="openCreateFactDialog"
       @deletedCharacterFromMenu="onCharacterDeleted"
+      @toggleCharacterVisibility="toggleSelectedCharacterVisibility"
     />
     <FactNodeContextMenuComponent
       ref="factMenuRef"
       :loreWeaveApiService="loreWeaveApiService"
       :selectedFactId="selectedFactNodeId"
+      :isGameMaster="visibility.isGameMaster"
+      :isFactHidden="selectedFactIsHidden"
       @openUpdateFactDialog="openUpdateFactDialog"
       @openConnectFactDialog="openConnectFactDialog"
       @deletedFactFromMenu="onFactDeleted"
+      @toggleFactVisibility="toggleSelectedFactVisibility"
     />
     <EdgeContextMenuComponent
       ref="edgeMenuRef"
@@ -275,11 +351,18 @@ function openKnowEdgeDetailsDialog(edgeId: string) {
       :selectedEdgeId="selectedEdgeId"
       :edgeIdSeparator="EDGE_ID_SEPARATOR"
       :isFactEdge="selectedEdgeIsFactEdge"
+      :isGameMaster="visibility.isGameMaster"
+      :isEdgeHidden="selectedEdgeIsHidden"
       @openUpdateKnowEdgeDialog="openUpdateKnowEdgeDialog"
       @deleteKnowEdgeFromMenu="onEdgeKnowDeleted"
       @deleteFactEdgeFromMenu="onFactEdgeDeleted"
+      @toggleEdgeVisibility="toggleSelectedEdgeVisibility"
     />
-    <ViewContextMenuComponent ref="viewMenuRef" @openCreateCharacterDialog="openCreateDialog" />
+    <ViewContextMenuComponent
+      ref="viewMenuRef"
+      :isGameMaster="visibility.isGameMaster"
+      @openCreateCharacterDialog="openCreateDialog"
+    />
 
     <CreateCharacterComponent
       v-model:open="createDialogOpen"
@@ -351,6 +434,8 @@ function openKnowEdgeDetailsDialog(edgeId: string) {
     />
 
     <NotificationListComponent :notificationService="notificationService" />
+
+    <GraphLegendComponent :isGameMaster="visibility.isGameMaster" />
 
     <button
       v-if="pathCharacterIds.length > 0"

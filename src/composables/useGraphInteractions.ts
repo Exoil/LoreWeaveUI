@@ -38,6 +38,11 @@ export interface UseGraphInteractionsOptions {
    * window; its guard skips edge ids without a know relation, i.e. fact edges).
    */
   onKnowEdgeDoubleClicked?: (edgeId: string) => void;
+  /**
+   * Called when a node drag finishes (App.vue broadcasts the GM's new layout
+   * to the players via useGraphLayoutSync).
+   */
+  onNodeDragEnd?: () => void;
 }
 
 /**
@@ -163,6 +168,7 @@ export function useGraphInteractions(
     'view:contextmenu': showViewContextMenu,
     'node:pointerover': nodePointerOverHandler,
     'node:pointerout': nodePointerOutHandler,
+    'node:dragend': () => options.onNodeDragEnd?.(),
   };
 
   return { eventHandlers };

@@ -1,14 +1,18 @@
 <script setup lang="ts">
 /**
  * Right-click context menu for empty graph canvas. Offers the create-character
- * action. Opened imperatively by the parent via the exposed
- * {@link showViewContextMenu}.
+ * action — GM only, so for players the menu never opens. Opened imperatively
+ * by the parent via the exposed {@link showViewContextMenu}.
  */
 import * as vNG from 'v-network-graph';
 import ContextMenuRoot from '@/components/menus/ContextMenuRoot.vue';
 import { useContextMenu } from '@/composables/useContextMenu';
 
 const { menuEl, isOpen, pos, showContextMenu, hideMenu } = useContextMenu();
+
+const props = defineProps<{
+  isGameMaster: boolean;
+}>();
 
 const emit = defineEmits<{
   openCreateCharacterDialog: [];
@@ -19,8 +23,12 @@ function onCreateClick() {
   hideMenu();
 }
 
-/** Open the menu at the view event (suppressing the browser's native menu). */
+/**
+ * Open the menu at the view event (suppressing the browser's native menu).
+ * Every action here mutates data, so for players this is a no-op.
+ */
 function showViewContextMenu(params: vNG.ViewEvent<MouseEvent>) {
+  if (!props.isGameMaster) return;
   const { event } = params;
   event.stopPropagation();
   event.preventDefault();

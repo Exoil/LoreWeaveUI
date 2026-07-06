@@ -7,23 +7,42 @@ import {
 } from 'v-network-graph/lib/force-layout';
 
 // --- Palette / sizing for nodes and edges ---------------------------------
-const PATH_HIGHLIGHT_COLOR = '#a855f7';
-const DEFAULT_NODE_COLOR = '#4466cc';
-const DEFAULT_EDGE_COLOR = '#aaaaaa';
-const FIRST_SELECTED_STROKE_COLOR = '#16a34a';
-const SECOND_SELECTED_STROKE_COLOR = '#14532d';
-const SELECTED_PAIR_EDGE_COLOR = '#22c55e';
+/**
+ * Every colour the graph renders with, exported so the on-screen legend
+ * (GraphLegendComponent) can never drift from the actual styling. The
+ * `hidden*` entries are the GM-only washed-out variants of items hidden
+ * from players.
+ */
+export const GRAPH_PALETTE = {
+  characterNode: '#4466cc',
+  factNode: '#d97706',
+  pathHighlight: '#a855f7',
+  firstSelectedStroke: '#16a34a',
+  secondSelectedStroke: '#14532d',
+  factSelectedStroke: '#92400e',
+  relationEdge: '#aaaaaa',
+  selectedPairEdge: '#22c55e',
+  factEdge: '#d9a066',
+  hiddenNode: '#b6c2e3',
+  hiddenFactNode: '#ecd3ab',
+  hiddenEdge: '#dddddd',
+} as const;
+
+/** Weak relations render dashed (strong stay solid); exported for the legend. */
+export const WEAK_EDGE_DASHARRAY = '6 4';
+/** Character→fact connections render dotted; exported for the legend. */
+export const FACT_EDGE_DASHARRAY = '2 3';
+
 const SELECTED_STROKE_WIDTH = 4;
-const WEAK_EDGE_DASHARRAY = '6 4';
 const DEFAULT_EDGE_WIDTH = 3;
 const EMPHASIZED_EDGE_WIDTH = 6;
-const FACT_NODE_COLOR = '#d97706';
-const FACT_SELECTED_STROKE_COLOR = '#92400e';
 const FACT_NODE_RADIUS = 12;
 const DEFAULT_NODE_RADIUS = 16;
-const FACT_EDGE_COLOR = '#d9a066';
-const FACT_EDGE_DASHARRAY = '2 3';
 const FACT_EDGE_WIDTH = 2;
+
+export interface UseGraphConfigurationOptions {
+  canEditLayout?: boolean;
+}
 
 /**
  * Builds the full <v-network-graph> configuration: node/edge styling driven by
@@ -32,41 +51,48 @@ const FACT_EDGE_WIDTH = 2;
  *
  * Styling reacts to flags carried on each node/edge object:
  *  - nodes: `highlighted` (on a path), `isFirstSelected`, `isSecondSelected`,
- *    `isFact` / `isFactSelected` (smaller amber fact nodes).
+ *    `isFact` / `isFactSelected` (smaller amber fact nodes), `isHidden`
+ *    (GM-only faded rendering of items hidden from players).
  *  - edges: `connectsSelected` (joins the two selected nodes), `highlighted`
  *    (on a path), `isStrong` (solid vs. dashed weak relation), `isFactEdge`
- *    (thin dotted character→fact connection).
+ *    (thin dotted character→fact connection), `isHidden` (GM-only faded).
  *
+ * @param options.canEditLayout whether the user may drag nodes around
+ *   (default true). Players are view-only: the GM's arrangement is synced to
+ *   them, so their own dragging is disabled.
  * @returns `{ graphConfiguration }` — pass straight to `<v-network-graph :configs>`.
  */
-export function useGraphConfiguration() {
+export function useGraphConfiguration(options: UseGraphConfigurationOptions = {}) {
   const graphConfiguration = reactive(vNG.getFullConfigs());
 
   // Fact nodes may join the selection alongside the two characters.
   graphConfiguration.node.selectable = 3;
+  graphConfiguration.node.draggable = options.canEditLayout ?? true;
   graphConfiguration.node.focusring.visible = false;
   graphConfiguration.node.normal.radius = (node) =>
     node.isFact ? FACT_NODE_RADIUS : DEFAULT_NODE_RADIUS;
   graphConfiguration.node.normal.color = (node) => {
-    if (node.isFact) return FACT_NODE_COLOR;
-    return node.highlighted ? PATH_HIGHLIGHT_COLOR : DEFAULT_NODE_COLOR;
+    if (node.isHidden) return node.isFact ? GRAPH_PALETTE.hiddenFactNode : GRAPH_PALETTE.hiddenNode;
+    if (node.isFact) return GRAPH_PALETTE.factNode;
+    return node.highlighted ? GRAPH_PALETTE.pathHighlight : GRAPH_PALETTE.characterNode;
   };
   graphConfiguration.node.normal.strokeWidth = (node) =>
     node.isFirstSelected || node.isSecondSelected || node.isFactSelected
       ? SELECTED_STROKE_WIDTH
       : 0;
   graphConfiguration.node.normal.strokeColor = (node) => {
-    if (node.isFactSelected) return FACT_SELECTED_STROKE_COLOR;
-    if (node.isSecondSelected) return SECOND_SELECTED_STROKE_COLOR;
-    if (node.isFirstSelected) return FIRST_SELECTED_STROKE_COLOR;
+    if (node.isFactSelected) return GRAPH_PALETTE.factSelectedStroke;
+    if (node.isSecondSelected) return GRAPH_PALETTE.secondSelectedStroke;
+    if (node.isFirstSelected) return GRAPH_PALETTE.firstSelectedStroke;
     return undefined;
   };
   graphConfiguration.edge.selectable = 1;
   graphConfiguration.edge.normal.color = (edge) => {
-    if (edge.isFactEdge) return FACT_EDGE_COLOR;
-    if (edge.connectsSelected) return SELECTED_PAIR_EDGE_COLOR;
-    if (edge.highlighted) return PATH_HIGHLIGHT_COLOR;
-    return DEFAULT_EDGE_COLOR;
+    if (edge.isHidden) return GRAPH_PALETTE.hiddenEdge;
+    if (edge.isFactEdge) return GRAPH_PALETTE.factEdge;
+    if (edge.connectsSelected) return GRAPH_PALETTE.selectedPairEdge;
+    if (edge.highlighted) return GRAPH_PALETTE.pathHighlight;
+    return GRAPH_PALETTE.relationEdge;
   };
   graphConfiguration.edge.normal.width = (edge) => {
     if (edge.isFactEdge) return FACT_EDGE_WIDTH;

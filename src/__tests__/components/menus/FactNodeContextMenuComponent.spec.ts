@@ -27,6 +27,8 @@ function defaultProps(overrides = {}) {
   return {
     loreWeaveApiService: makeService(),
     selectedFactId: 'fact-1',
+    isGameMaster: true,
+    isFactHidden: false,
     ...overrides,
   };
 }
@@ -117,6 +119,46 @@ describe('FactNodeContextMenuComponent', () => {
     await flushPromises();
 
     expect(wrapper.emitted('deletedFactFromMenu')).toEqual([['fact-1']]);
+    expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
+  });
+
+  it('hide from players emits toggleFactVisibility and closes the menu', async () => {
+    const wrapper = mount(FactNodeContextMenuComponent, { props: defaultProps() });
+    (wrapper.vm as unknown as ExposedFactMenu).showFactNodeContextMenu(makeNodeEvent());
+    await nextTick();
+
+    const button = wrapper.find('#fact-context-toggle-visibility-button');
+    expect(button.text()).toBe('Hide from players');
+    await button.trigger('click');
+
+    expect(wrapper.emitted('toggleFactVisibility')).toHaveLength(1);
+    expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
+  });
+
+  it('a hidden fact offers "Show for players" instead', () => {
+    const wrapper = mount(FactNodeContextMenuComponent, {
+      props: defaultProps({ isFactHidden: true }),
+    });
+
+    expect(wrapper.find('#fact-context-toggle-visibility-button').text()).toBe('Show for players');
+  });
+
+  it('players do not get the visibility toggle at all', () => {
+    const wrapper = mount(FactNodeContextMenuComponent, {
+      props: defaultProps({ isGameMaster: false }),
+    });
+
+    expect(wrapper.find('#fact-context-toggle-visibility-button').exists()).toBe(false);
+  });
+
+  it('does not open for players — every fact action is GM-only', async () => {
+    const wrapper = mount(FactNodeContextMenuComponent, {
+      props: defaultProps({ isGameMaster: false }),
+    });
+
+    (wrapper.vm as unknown as ExposedFactMenu).showFactNodeContextMenu(makeNodeEvent());
+    await nextTick();
+
     expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
   });
 });

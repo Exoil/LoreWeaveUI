@@ -29,6 +29,8 @@ function defaultProps(overrides = {}) {
     loreWeaveApiService: makeService(),
     firstSelectedCharacterId: 'char-1',
     secondSelectedCharacterId: null,
+    isGameMaster: true,
+    isCharacterHidden: false,
     ...overrides,
   };
 }
@@ -145,5 +147,46 @@ describe('NodeContextMenuComponent', () => {
 
     const button = wrapper.find<HTMLButtonElement>('#node-context-create-fact-button');
     expect(button.element.disabled).toBe(true);
+  });
+
+  it('hide from players emits toggleCharacterVisibility and closes the menu', async () => {
+    const wrapper = mount(NodeContextMenuComponent, { props: defaultProps() });
+    (wrapper.vm as unknown as ExposedNodeMenu).showNodeContextMenu(makeNodeEvent());
+    await nextTick();
+
+    const button = wrapper.find('#node-context-toggle-visibility-button');
+    expect(button.text()).toBe('Hide from players');
+    await button.trigger('click');
+
+    expect(wrapper.emitted('toggleCharacterVisibility')).toHaveLength(1);
+    expect(wrapper.find('.dropdown').classes()).not.toContain('is-active');
+  });
+
+  it('a hidden character offers "Show for players" instead', () => {
+    const wrapper = mount(NodeContextMenuComponent, {
+      props: defaultProps({ isCharacterHidden: true }),
+    });
+
+    expect(wrapper.find('#node-context-toggle-visibility-button').text()).toBe('Show for players');
+  });
+
+  it('players do not get the visibility toggle at all', () => {
+    const wrapper = mount(NodeContextMenuComponent, {
+      props: defaultProps({ isGameMaster: false }),
+    });
+
+    expect(wrapper.find('#node-context-toggle-visibility-button').exists()).toBe(false);
+  });
+
+  it('players only get the find-path action — data management is GM-only', () => {
+    const wrapper = mount(NodeContextMenuComponent, {
+      props: defaultProps({ isGameMaster: false }),
+    });
+
+    expect(wrapper.find('#node-context-find-path-button').exists()).toBe(true);
+    expect(wrapper.find('#node-context-update-character-button').exists()).toBe(false);
+    expect(wrapper.find('#delete-character-button').exists()).toBe(false);
+    expect(wrapper.find('#node-context-create-know-edge-button').exists()).toBe(false);
+    expect(wrapper.find('#node-context-create-fact-button').exists()).toBe(false);
   });
 });

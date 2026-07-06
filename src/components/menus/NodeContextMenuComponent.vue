@@ -3,6 +3,7 @@
  * Right-click context menu for a graph node (character). Offers update, find-path,
  * delete, and create-relation actions; each is disabled unless the required
  * selection is present (the create-relation action needs two selected nodes).
+ * Only the GM manages data: players see just the find-path action.
  * Opened imperatively by the parent via the exposed {@link showNodeContextMenu}.
  */
 import * as vNG from 'v-network-graph';
@@ -17,6 +18,8 @@ const props = defineProps<{
   loreWeaveApiService: LoreWeaveApiService;
   firstSelectedCharacterId: string | null;
   secondSelectedCharacterId: string | null;
+  isGameMaster: boolean;
+  isCharacterHidden: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -25,6 +28,7 @@ const emit = defineEmits<{
   openCreateKnowEdgeDialog: [];
   openCreateFactDialog: [];
   deletedCharacterFromMenu: [deletedCharacterId: string];
+  toggleCharacterVisibility: [];
 }>();
 
 function onUpdateClick() {
@@ -56,6 +60,12 @@ function onCreateFactClick() {
   hideMenu();
 }
 
+function onToggleVisibilityClick() {
+  if (!props.firstSelectedCharacterId) return;
+  emit('toggleCharacterVisibility');
+  hideMenu();
+}
+
 /** Open the menu at the node event (suppressing the browser's native menu). */
 function showNodeContextMenu(params: vNG.NodeEvent<MouseEvent>) {
   const { event } = params;
@@ -81,6 +91,8 @@ defineExpose({
       <div class="dropdown-menu" role="menu">
         <div class="dropdown-content">
           <button
+            v-if="isGameMaster"
+            id="node-context-update-character-button"
             class="dropdown-item"
             type="button"
             @click="onUpdateClick"
@@ -99,7 +111,7 @@ defineExpose({
             Search path to
           </button>
 
-          <div class="dropdown-item dropdown-item--embedded">
+          <div v-if="isGameMaster" class="dropdown-item dropdown-item--embedded">
             <DeleteCharacterComponent
               :disabled="!firstSelectedCharacterId"
               :loreWeaveApiService="loreWeaveApiService"
@@ -109,6 +121,7 @@ defineExpose({
           </div>
 
           <button
+            v-if="isGameMaster"
             id="node-context-create-know-edge-button"
             class="dropdown-item"
             type="button"
@@ -119,6 +132,7 @@ defineExpose({
           </button>
 
           <button
+            v-if="isGameMaster"
             id="node-context-create-fact-button"
             class="dropdown-item"
             type="button"
@@ -126,6 +140,17 @@ defineExpose({
             :disabled="!firstSelectedCharacterId"
           >
             Create fact
+          </button>
+
+          <button
+            v-if="isGameMaster"
+            id="node-context-toggle-visibility-button"
+            class="dropdown-item"
+            type="button"
+            @click="onToggleVisibilityClick"
+            :disabled="!firstSelectedCharacterId"
+          >
+            {{ isCharacterHidden ? 'Show for players' : 'Hide from players' }}
           </button>
         </div>
       </div>
