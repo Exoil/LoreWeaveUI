@@ -86,6 +86,18 @@ function readDocumentIdentity(doc: unknown): { id: string; name: string } | null
   return { id, name };
 }
 
+/**
+ * The parent journal of a JournalEntryPage document (the page hooks hand us
+ * the page; the fact is linked to the *entry*), or null when malformed.
+ */
+export function readPageParentJournal(
+  page: unknown,
+): { id: string; name: string; journal: unknown } | null {
+  const journal = (page as { parent?: unknown } | null)?.parent;
+  const identity = readDocumentIdentity(journal);
+  return identity ? { ...identity, journal } : null;
+}
+
 function loadLinks(): DocumentLinks {
   return parseDocumentLinks(game.settings.get(MODULE_ID, DOCUMENT_LINKS_SETTING));
 }
@@ -296,4 +308,40 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
       await bumpGraphRevision();
     });
   });
+
+  // --- Journal pages → fact content ---------------------------------------
+  // A journal is created empty and its text arrives as pages afterwards, so
+  // the fact's content must follow the page lifecycle, not just the entry's.
+
+  /**
+   * Re-derive the linked fact's content from the page's parent journal and
+   * push it when it changed. The fact keeps its current title — renames are
+   * handled by the updateJournalEntry hook.
+   */
+  function syncJournalContent(operation: string, page: unknown): void {
+    const parent = readPageParentJournal(page);
+    if (!parent) return;
+    runSync(operation, async () => {
+      const factId = loadLinks().journals[parent.id];
+      if (!factId) return;
+      const content = extractJournalContent(parent.journal);
+      const service = makeService(getApiBaseUrl);
+      const current = await service.getFactAsync(factId);
+      if (current.content === content) return;
+      await service.updateFactAsync(
+        new UpdateFact(factId, current.title, content, current.version),
+      );
+      await bumpGraphRevision();
+    });
+  }
+
+  Hooks.on('createJournalEntryPage', (page: unknown) =>
+    syncJournalContent('createJournalEntryPage', page),
+  );
+  Hooks.on('updateJournalEntryPage', (page: unknown) =>
+    syncJournalContent('updateJournalEntryPage', page),
+  );
+  Hooks.on('deleteJournalEntryPage', (page: unknown) =>
+    syncJournalContent('deleteJournalEntryPage', page),
+  );
 }

@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { parseDocumentLinks, extractJournalContent } from '@/foundry/document-sync';
+import {
+  parseDocumentLinks,
+  extractJournalContent,
+  readPageParentJournal,
+} from '@/foundry/document-sync';
 
 describe('parseDocumentLinks', () => {
   it('parses a well-formed value', () => {
@@ -56,5 +60,26 @@ describe('extractJournalContent', () => {
     expect(extractJournalContent({ pages: { contents: [{ image: {} }] } })).toBe('');
     expect(extractJournalContent({})).toBe('');
     expect(extractJournalContent(null)).toBe('');
+  });
+});
+
+describe('readPageParentJournal', () => {
+  it('returns the parent journal identity and document', () => {
+    const journal = { id: 'journal-1', name: 'Handout', pages: { contents: [] } };
+    const page = { id: 'page-1', name: 'Page 1', parent: journal };
+
+    const parent = readPageParentJournal(page);
+
+    expect(parent).not.toBeNull();
+    expect(parent!.id).toBe('journal-1');
+    expect(parent!.name).toBe('Handout');
+    expect(parent!.journal).toBe(journal);
+  });
+
+  it('returns null for pages without a well-formed parent', () => {
+    expect(readPageParentJournal({ id: 'page-1', parent: null })).toBeNull();
+    expect(readPageParentJournal({ id: 'page-1', parent: { id: 42 } })).toBeNull();
+    expect(readPageParentJournal({})).toBeNull();
+    expect(readPageParentJournal(null)).toBeNull();
   });
 });
