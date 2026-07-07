@@ -41,8 +41,6 @@ declare global {
       format(key: string, data: Record<string, unknown>): string;
     };
     user?: { isGM: boolean; id: string };
-    /** The active world; `title` names the board created for it. */
-    world?: { id: string; title?: string };
     /**
      * Foundry's socket.io socket. Module messages travel on the
      * `module.<module-id>` event (requires `"socket": true` in module.json);

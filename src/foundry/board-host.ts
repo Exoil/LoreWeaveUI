@@ -1,31 +1,24 @@
 import { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { NotificationService } from '@/services/NotificationService';
-import { BOARD_NAME_MAX_LENGTH, clampToLength } from '@/services/Models/ValidationRules';
 import { MODULE_ID } from './constants';
 
 /**
  * Correlates the backend board with the Foundry world. Inside Foundry the
- * user never picks a board: the GM's client lazily creates one named after
- * the world and stores its id in the world-scoped `boardId` setting; every
- * client (GM and players) then resolves the same board from that setting.
+ * user never picks a board: the GM's client lazily creates one (named
+ * {@link DEFAULT_BOARD_NAME}; the GM renames it in the board settings) and
+ * stores its id in the world-scoped `boardId` setting; every client (GM and
+ * players) then resolves the same board from that setting.
  */
 
 /** Settings key for the backend board linked to this world (world scope). */
 export const BOARD_ID_SETTING = 'boardId';
 
-/** Fallback board name when the world carries no usable title. */
-const FALLBACK_BOARD_NAME = 'LoreWeave Board';
+/** Name every auto-created world board starts with (renameable by the GM). */
+export const DEFAULT_BOARD_NAME = 'NewWorld';
 
 function readStoredBoardId(): string {
   const value = game.settings.get(MODULE_ID, BOARD_ID_SETTING);
   return typeof value === 'string' ? value : '';
-}
-
-/** The board name for this world: its title, clamped to the contract limit. */
-export function worldBoardName(): string {
-  const title = game.world?.title?.trim();
-  if (!title) return FALLBACK_BOARD_NAME;
-  return clampToLength(title, BOARD_NAME_MAX_LENGTH);
 }
 
 /**
@@ -55,7 +48,7 @@ export async function ensureWorldBoardAsync(getApiBaseUrl: () => string): Promis
   const notifications = new NotificationService();
   notifications.onNotification((n) => ui.notifications?.error(`LoreWeave: ${n.message}`));
   const service = new LoreWeaveApiService(getApiBaseUrl(), notifications);
-  const boardId = await service.createBoardAsync(worldBoardName());
+  const boardId = await service.createBoardAsync(DEFAULT_BOARD_NAME);
   await game.settings.set(MODULE_ID, BOARD_ID_SETTING, boardId);
   return boardId;
 }
