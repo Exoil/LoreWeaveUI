@@ -8,6 +8,7 @@
  * also require at least 1 character); the Foundry document sync clamps
  * instead (an oversized Foundry document must not break the sync).
  */
+export const BOARD_NAME_MAX_LENGTH = 50;
 export const CHARACTER_NAME_MAX_LENGTH = 50;
 export const KNOW_DESCRIPTION_MAX_LENGTH = 256;
 export const FACT_TITLE_MAX_LENGTH = 100;

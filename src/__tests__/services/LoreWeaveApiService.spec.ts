@@ -49,3 +49,26 @@ describe('LoreWeaveApiService.getAllCharactersAsync', () => {
     expect(getPage).toHaveBeenCalledWith(expect.anything(), controller.signal);
   });
 });
+
+describe('LoreWeaveApiService active board scoping', () => {
+  it('starts without an active board', () => {
+    const service = new LoreWeaveApiService('');
+
+    expect(service.activeBoardId).toBeNull();
+  });
+
+  it('remembers the board set via setActiveBoard', () => {
+    const service = new LoreWeaveApiService('');
+
+    service.setActiveBoard('board-1');
+
+    expect(service.activeBoardId).toBe('board-1');
+  });
+
+  it('rejects data requests before a board is selected', async () => {
+    const service = new LoreWeaveApiService('');
+
+    await expect(service.getCharacterAsync('some-id')).rejects.toThrow(/no active board/);
+    await expect(service.deleteFactAsync('some-id')).rejects.toThrow(/no active board/);
+  });
+});

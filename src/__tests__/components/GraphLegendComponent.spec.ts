@@ -5,14 +5,18 @@ import { GRAPH_PALETTE } from '@/composables/useGraphConfiguration';
 
 describe('GraphLegendComponent', () => {
   it('is collapsed by default', () => {
-    const wrapper = mount(GraphLegendComponent, { props: { isGameMaster: true } });
+    const wrapper = mount(GraphLegendComponent, {
+      props: { isGameMaster: true, palette: GRAPH_PALETTE },
+    });
 
     expect(wrapper.find('#graph-legend-panel').exists()).toBe(false);
     expect(wrapper.find('#graph-legend-toggle-button').text()).toBe('Legend');
   });
 
   it('the toggle button opens and closes the panel', async () => {
-    const wrapper = mount(GraphLegendComponent, { props: { isGameMaster: true } });
+    const wrapper = mount(GraphLegendComponent, {
+      props: { isGameMaster: true, palette: GRAPH_PALETTE },
+    });
 
     await wrapper.find('#graph-legend-toggle-button').trigger('click');
     expect(wrapper.find('#graph-legend-panel').exists()).toBe(true);
@@ -23,7 +27,9 @@ describe('GraphLegendComponent', () => {
   });
 
   it('swatches use the shared graph palette', async () => {
-    const wrapper = mount(GraphLegendComponent, { props: { isGameMaster: true } });
+    const wrapper = mount(GraphLegendComponent, {
+      props: { isGameMaster: true, palette: GRAPH_PALETTE },
+    });
     await wrapper.find('#graph-legend-toggle-button').trigger('click');
 
     const characterSwatch = wrapper.find('#graph-legend-character-node .legend-node');
@@ -34,7 +40,9 @@ describe('GraphLegendComponent', () => {
   });
 
   it('the GM sees the hidden-items section', async () => {
-    const wrapper = mount(GraphLegendComponent, { props: { isGameMaster: true } });
+    const wrapper = mount(GraphLegendComponent, {
+      props: { isGameMaster: true, palette: GRAPH_PALETTE },
+    });
     await wrapper.find('#graph-legend-toggle-button').trigger('click');
 
     expect(wrapper.find('#graph-legend-hidden-character').exists()).toBe(true);
@@ -44,7 +52,9 @@ describe('GraphLegendComponent', () => {
   });
 
   it('players do not see the hidden-items section at all', async () => {
-    const wrapper = mount(GraphLegendComponent, { props: { isGameMaster: false } });
+    const wrapper = mount(GraphLegendComponent, {
+      props: { isGameMaster: false, palette: GRAPH_PALETTE },
+    });
     await wrapper.find('#graph-legend-toggle-button').trigger('click');
 
     expect(wrapper.find('#graph-legend-hidden-character').exists()).toBe(false);

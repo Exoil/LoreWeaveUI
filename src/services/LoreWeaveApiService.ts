@@ -1,14 +1,22 @@
 import axios, { isAxiosError } from 'axios';
 import {
+  type BoardDto,
+  BoardConfigurationDto,
   type CharacterPayloadWithRelations,
+  CreateBoardDto,
   CreateCharacterDto,
   CreateFactDto,
   CreateKnowsDto,
   LoreWeaveApiClient,
+  UpdateBoardDto,
   UpdateCharacterDto,
   UpdateFactDto,
   UpdateKnowsDto,
 } from './httpClients/LoreWeaveApiClient';
+import { Board } from './Models/Board';
+import { BoardConfiguration } from './Models/BoardConfiguration';
+import { VersionedBoard } from './Models/VersionedBoard';
+import type { UpdateBoard } from './Models/UpdateBoard';
 import { VersionedCharacter } from './Models/VersionedCharacter';
 import { PageQuery } from './Models/PageQuery';
 import type { UpdateCharacter } from './Models/UpdateCharacter';
@@ -28,9 +36,16 @@ import type { NotificationService } from '@/services/NotificationService';
  * methods taking an `AbortSignal`, and translates the generated DTOs into the
  * domain models under `services/Models/`. Components must use this, never the
  * raw client or axios (see `.claude/rules/http-client.md`).
+ *
+ * Every character/relation/fact request is scoped to the **active board** (one
+ * board per RPG game). The host sets it once via {@link setActiveBoard} — the
+ * Foundry module resolves the board from the world, the standalone SPA from
+ * the board picker — and the wrapper injects the id into every call, so
+ * components stay board-agnostic.
  */
 export class LoreWeaveApiService {
   private _loreWeaveApiClient: LoreWeaveApiClient;
+  private _activeBoardId: string | null = null;
 
   /**
    * @param baseUrl API base URL ('' = same origin; absolute URL inside Foundry).
@@ -67,6 +82,122 @@ export class LoreWeaveApiService {
     return isAxiosError(error) && error.response?.status === 412;
   }
 
+  /** The board every character/relation/fact request is scoped to (null until the host picks one). */
+  public get activeBoardId(): string | null {
+    return this._activeBoardId;
+  }
+
+  /** Set (or clear) the active board. Call before any character/relation/fact request. */
+  public setActiveBoard(boardId: string | null): void {
+    this._activeBoardId = boardId;
+  }
+
+  /** The active board id, or throw — data requests without a board are always a wiring bug. */
+  private requireBoardId(): string {
+    if (!this._activeBoardId) {
+      throw new Error('LoreWeaveApiService: no active board — call setActiveBoard() first.');
+    }
+    return this._activeBoardId;
+  }
+
+  /** Map a generated board configuration DTO to the domain {@link BoardConfiguration}. */
+  private static toBoardConfiguration(dto: BoardConfigurationDto): BoardConfiguration {
+    return new BoardConfiguration(
+      dto.characterNodeColor,
+      dto.factNodeColor,
+      dto.relationEdgeColor,
+      dto.factEdgeColor,
+      dto.pathHighlightColor,
+      dto.nodeRadius,
+      dto.edgeWidth,
+      dto.curvedEdges,
+      dto.showGrid,
+      dto.scalingObjects,
+    );
+  }
+
+  /** Map a domain {@link BoardConfiguration} to the generated DTO. */
+  private static toBoardConfigurationDto(configuration: BoardConfiguration): BoardConfigurationDto {
+    return new BoardConfigurationDto({
+      characterNodeColor: configuration.characterNodeColor,
+      factNodeColor: configuration.factNodeColor,
+      relationEdgeColor: configuration.relationEdgeColor,
+      factEdgeColor: configuration.factEdgeColor,
+      pathHighlightColor: configuration.pathHighlightColor,
+      nodeRadius: configuration.nodeRadius,
+      edgeWidth: configuration.edgeWidth,
+      curvedEdges: configuration.curvedEdges,
+      showGrid: configuration.showGrid,
+      scalingObjects: configuration.scalingObjects,
+    });
+  }
+
+  /** Map a generated board payload to the domain {@link Board}. */
+  private static toBoard(dto: BoardDto): Board {
+    return new Board(dto.id, dto.name, LoreWeaveApiService.toBoardConfiguration(dto.configuration));
+  }
+
+  /** Fetch every board (one per RPG game). */
+  public async getBoardsAsync(signal?: AbortSignal): Promise<Board[]> {
+    const response = await this._loreWeaveApiClient.getBoards(signal);
+    return response.result.map((b) => LoreWeaveApiService.toBoard(b));
+  }
+
+  /**
+   * Create a board with the backend's default configuration.
+   * @returns the new board's id.
+   */
+  public async createBoardAsync(name: string, signal?: AbortSignal): Promise<string> {
+    const createBoard = new CreateBoardDto({ name: name });
+    const response = await this._loreWeaveApiClient.createBoard(createBoard, signal);
+    return response.result;
+  }
+
+  /**
+   * Fetch one board by id, including its `version` (read from the ETag
+   * response header, not the body) for later concurrency-checked updates.
+   */
+  public async getBoardAsync(id: string, signal?: AbortSignal): Promise<VersionedBoard> {
+    const response = await this._loreWeaveApiClient.getBoardById(id, signal);
+    return new VersionedBoard(
+      response.result.id,
+      response.result.name,
+      LoreWeaveApiService.toBoardConfiguration(response.result.configuration),
+      response.headers['etag'],
+    );
+  }
+
+  /**
+   * Whether a board with the given id still exists on the backend. A 404 is a
+   * normal negative answer here, not a failure — probe with a service
+   * constructed **without** a notification service, or the interceptor will
+   * toast the 404.
+   */
+  public async boardExistsAsync(id: string, signal?: AbortSignal): Promise<boolean> {
+    try {
+      await this._loreWeaveApiClient.getBoardById(id, signal);
+      return true;
+    } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 404) return false;
+      throw error;
+    }
+  }
+
+  /** Edit a board's name/configuration; `update.version` (ETag) guards concurrent edits. */
+  public async updateBoardAsync(update: UpdateBoard, signal?: AbortSignal): Promise<void> {
+    const body = new UpdateBoardDto({
+      name: update.name,
+      configuration: LoreWeaveApiService.toBoardConfigurationDto(update.configuration),
+    });
+
+    await this._loreWeaveApiClient.updateBoard(update.version, body, update.id, signal);
+  }
+
+  /** Delete a board together with all characters, relations and facts on it. */
+  public async deleteBoardAsync(id: string, signal?: AbortSignal): Promise<void> {
+    await this._loreWeaveApiClient.deleteBoard(id, signal);
+  }
+
   /** Map a generated character payload (+ its relations and facts) to the domain {@link Character}. */
   private static toCharacter(payload: CharacterPayloadWithRelations): Character {
     const relations = (payload.knowCharacters ?? []).map(
@@ -86,7 +217,11 @@ export class LoreWeaveApiService {
       name: name,
     });
 
-    const resposne = await this._loreWeaveApiClient.createCharacter(createCharacter, signal);
+    const resposne = await this._loreWeaveApiClient.createCharacter(
+      createCharacter,
+      this.requireBoardId(),
+      signal,
+    );
 
     return resposne.result;
   }
@@ -96,7 +231,11 @@ export class LoreWeaveApiService {
    * response header, not the body) for later concurrency-checked updates.
    */
   public async getCharacterAsync(id: string, signal?: AbortSignal): Promise<VersionedCharacter> {
-    const response = await this._loreWeaveApiClient.getCharacterById(id, signal);
+    const response = await this._loreWeaveApiClient.getCharacterById(
+      id,
+      this.requireBoardId(),
+      signal,
+    );
     return new VersionedCharacter(
       response.result.id,
       response.result.name,
@@ -112,7 +251,7 @@ export class LoreWeaveApiService {
    */
   public async characterExistsAsync(id: string, signal?: AbortSignal): Promise<boolean> {
     try {
-      await this._loreWeaveApiClient.getCharacterById(id, signal);
+      await this._loreWeaveApiClient.getCharacterById(id, this.requireBoardId(), signal);
       return true;
     } catch (error) {
       if (isAxiosError(error) && error.response?.status === 404) return false;
@@ -130,13 +269,14 @@ export class LoreWeaveApiService {
       updateCharacter.id,
       updateCharacter.version,
       modelToUpdate,
+      this.requireBoardId(),
       signal,
     );
   }
 
   /** Delete a character by id. */
   public async deleteCharacterAsync(id: string, signal?: AbortSignal) {
-    await this._loreWeaveApiClient.deleteCharacter(id, signal);
+    await this._loreWeaveApiClient.deleteCharacter(id, this.requireBoardId(), signal);
   }
 
   /** Fetch a page of characters (with their relations) per the given {@link PageQuery}. */
@@ -150,6 +290,7 @@ export class LoreWeaveApiService {
       pageQuery.sortType,
       pageQuery.sortOrder,
       undefined,
+      this.requireBoardId(),
       signal,
     );
 
@@ -196,8 +337,13 @@ export class LoreWeaveApiService {
       isStrongRelation: isStrongRelation,
     });
 
-    return (await this._loreWeaveApiClient.createKnowRelationship(createKnowRelation, signal))
-      .result;
+    return (
+      await this._loreWeaveApiClient.createKnowRelationship(
+        createKnowRelation,
+        this.requireBoardId(),
+        signal,
+      )
+    ).result;
   }
 
   /**
@@ -209,7 +355,12 @@ export class LoreWeaveApiService {
     toId: string,
     signal?: AbortSignal,
   ): Promise<VersionedKnowRelation> {
-    const response = await this._loreWeaveApiClient.getKnowRelationship(fromId, toId, signal);
+    const response = await this._loreWeaveApiClient.getKnowRelationship(
+      fromId,
+      toId,
+      this.requireBoardId(),
+      signal,
+    );
     const relation = response.result;
 
     // The relation's version is carried by the ETag response header, not the
@@ -238,6 +389,7 @@ export class LoreWeaveApiService {
       update.toCharacterId,
       update.version,
       body,
+      this.requireBoardId(),
       signal,
     );
   }
@@ -248,7 +400,14 @@ export class LoreWeaveApiService {
     toId: string,
     signal?: AbortSignal,
   ): Promise<void> {
-    return (await this._loreWeaveApiClient.deleteKnowRelationship(fromId, toId, signal)).result;
+    return (
+      await this._loreWeaveApiClient.deleteKnowRelationship(
+        fromId,
+        toId,
+        this.requireBoardId(),
+        signal,
+      )
+    ).result;
   }
 
   /** Search characters by name (paged, name-ascending). Backs the typeahead search. */
@@ -264,6 +423,7 @@ export class LoreWeaveApiService {
       'name',
       'Asc',
       nameFilter,
+      this.requireBoardId(),
       signal,
     );
 
@@ -288,6 +448,7 @@ export class LoreWeaveApiService {
     const response = await this._loreWeaveApiClient.addFactToCharacter(
       characterId,
       createFact,
+      this.requireBoardId(),
       signal,
     );
 
@@ -299,7 +460,7 @@ export class LoreWeaveApiService {
    * header, not the body) for later concurrency-checked updates.
    */
   public async getFactAsync(id: string, signal?: AbortSignal): Promise<VersionedFact> {
-    const response = await this._loreWeaveApiClient.getFact(id, signal);
+    const response = await this._loreWeaveApiClient.getFact(id, this.requireBoardId(), signal);
     return new VersionedFact(
       response.result.id,
       response.result.title,
@@ -315,12 +476,18 @@ export class LoreWeaveApiService {
       content: update.content,
     });
 
-    await this._loreWeaveApiClient.updateFact(update.id, update.version, body, signal);
+    await this._loreWeaveApiClient.updateFact(
+      update.id,
+      update.version,
+      body,
+      this.requireBoardId(),
+      signal,
+    );
   }
 
   /** Delete a fact by id (also removes its connections on the backend). */
   public async deleteFactAsync(id: string, signal?: AbortSignal): Promise<void> {
-    await this._loreWeaveApiClient.deleteFact(id, signal);
+    await this._loreWeaveApiClient.deleteFact(id, this.requireBoardId(), signal);
   }
 
   /** Connect an existing fact to an existing character (HAS_FACT). */
@@ -329,7 +496,12 @@ export class LoreWeaveApiService {
     factId: string,
     signal?: AbortSignal,
   ): Promise<void> {
-    await this._loreWeaveApiClient.connectFactToCharacter(characterId, factId, signal);
+    await this._loreWeaveApiClient.connectFactToCharacter(
+      characterId,
+      factId,
+      this.requireBoardId(),
+      signal,
+    );
   }
 
   /** Remove the HAS_FACT connection between a character and a fact (keeps the fact). */
@@ -338,7 +510,12 @@ export class LoreWeaveApiService {
     factId: string,
     signal?: AbortSignal,
   ): Promise<void> {
-    await this._loreWeaveApiClient.disconnectFactFromCharacter(characterId, factId, signal);
+    await this._loreWeaveApiClient.disconnectFactFromCharacter(
+      characterId,
+      factId,
+      this.requireBoardId(),
+      signal,
+    );
   }
 
   /**
@@ -354,6 +531,7 @@ export class LoreWeaveApiService {
       fromId,
       toId,
       undefined,
+      this.requireBoardId(),
       signal,
     );
 

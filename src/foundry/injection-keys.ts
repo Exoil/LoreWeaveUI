@@ -35,6 +35,15 @@ export const GRAPH_LAYOUT_SYNC_KEY: InjectionKey<GraphLayoutSyncChannel | null> 
 );
 
 /**
+ * Host-resolved board id. The Foundry module correlates the board with the
+ * world (the GM's client creates it on demand — see foundry/board-host), so
+ * the user never picks one there. The standalone SPA falls back to `null`
+ * and lets the user choose a board via the picker instead.
+ */
+export const BOARD_RESOLVER_KEY: InjectionKey<(() => Promise<string>) | null> =
+  Symbol('loreWeaveBoardResolver');
+
+/**
  * Incremental description of a change synced by the GM's client (Foundry
  * actor/journal → backend). Carried with the refresh signal so open windows
  * can apply it with one targeted fetch instead of re-walking every page.
