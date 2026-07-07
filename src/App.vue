@@ -6,9 +6,10 @@
  * This component just news up the API service, loads the initial data, holds the
  * modal open/close flags, and wires composables ↔ child components.
  */
-import { ref, computed, onBeforeMount, onMounted, onBeforeUnmount, inject } from 'vue';
+import { ref, shallowRef, computed, onBeforeMount, onMounted, onBeforeUnmount, inject } from 'vue';
 import {
   API_BASE_URL_KEY,
+  BOARD_RESOLVER_KEY,
   GRAPH_LAYOUT_STORAGE_KEY,
   GRAPH_LAYOUT_SYNC_KEY,
   GRAPH_REFRESH_KEY,
@@ -18,13 +19,18 @@ import {
   type GraphDataChange,
 } from '@/foundry/injection-keys';
 import { MODULE_ID } from '@/foundry/constants';
+import { isStandalone } from '@/env';
 import { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { NotificationService } from '@/services/NotificationService';
 import { Fact } from '@/services/Models/Fact';
+import type { BoardConfiguration } from '@/services/Models/BoardConfiguration';
+import type { VersionedBoard } from '@/services/Models/VersionedBoard';
 import type { VersionedCharacter } from '@/services/Models/VersionedCharacter';
 import type { VersionedFact } from '@/services/Models/VersionedFact';
 import NotificationListComponent from '@/components/NotificationListComponent.vue';
 import GraphLegendComponent from '@/components/GraphLegendComponent.vue';
+import BoardSettingsComponent from '@/components/BoardSettingsComponent.vue';
+import SelectBoardComponent from '@/components/SelectBoardComponent.vue';
 import NodeContextMenuComponent from '@/components/menus/NodeContextMenuComponent.vue';
 import FactNodeContextMenuComponent from '@/components/menus/FactNodeContextMenuComponent.vue';
 import EdgeContextMenuComponent from '@/components/menus/EdgeContextMenuComponent.vue';
@@ -83,9 +89,21 @@ const visibilityHost = inject(
 );
 const visibility = useGraphVisibility(visibilityHost);
 
+// --- Active board -----------------------------------------------------------
+// One board per RPG game; every data request is scoped to it. Foundry injects
+// a world-correlated resolver (the user never picks a board there); the
+// standalone SPA falls back to the picker modal, remembering the last choice.
+const boardResolver = inject(BOARD_RESOLVER_KEY, null);
+const activeBoard = shallowRef<VersionedBoard | null>(null);
+const activeBoardConfiguration = computed<BoardConfiguration | null>(
+  () => activeBoard.value?.configuration ?? null,
+);
+
 // Players are view-only: no node dragging (the GM's layout is synced to them).
-const { graphConfiguration } = useGraphConfiguration({
+// `palette` is the effective per-board colour set; the legend renders from it.
+const { graphConfiguration, palette } = useGraphConfiguration({
   canEditLayout: visibility.isGameMaster,
+  boardConfiguration: activeBoardConfiguration,
 });
 
 // Node positions survive close/reopen: the Foundry host injects a
@@ -294,10 +312,56 @@ async function applyExternalGraphChange(change: GraphDataChange | null) {
   }
 }
 
+// --- Board activation ------------------------------------------------------
+// Standalone remembers the last shown board per browser; Foundry needs no
+// memory — the world setting is the single source of truth there.
+const LAST_BOARD_STORAGE_KEY = `${MODULE_ID}:active-board`;
+
+/** Scope the service to the board, load it, and (re)load its graph. */
+async function activateBoard(boardId: string) {
+  loreWeaveApiService.setActiveBoard(boardId);
+  activeBoard.value = await loreWeaveApiService.getBoardAsync(boardId);
+  if (isStandalone) localStorage.setItem(LAST_BOARD_STORAGE_KEY, boardId);
+  // Selection and path highlights reference nodes of the previous board.
+  selection.clearSelection();
+  clearHighlightedPath();
+  await loadGraphData();
+}
+
 onMounted(async () => {
   unsubscribeGraphRefresh =
     graphRefreshSource?.subscribe((change) => void applyExternalGraphChange(change)) ?? null;
-  await loadGraphData();
+
+  // Foundry: the host resolves (and, on the GM's client, creates) the board
+  // correlated with the world — no picker.
+  if (boardResolver) {
+    try {
+      await activateBoard(await boardResolver());
+    } catch (error) {
+      if (error instanceof Error && error.name === 'CanceledError') return;
+      console.error('LoreWeave: resolving the world board failed', error);
+      notificationService.notify(
+        error instanceof Error ? error.message : 'LoreWeave: failed to resolve the board.',
+      );
+    }
+    return;
+  }
+
+  // Standalone: restore the last shown board when it still exists; otherwise
+  // let the user pick (or create) one.
+  try {
+    const lastBoardId = localStorage.getItem(LAST_BOARD_STORAGE_KEY);
+    // Probe without the notification service — a vanished board is a normal
+    // negative answer here, not an error to toast.
+    const probe = new LoreWeaveApiService(apiBaseUrl);
+    if (lastBoardId && (await probe.boardExistsAsync(lastBoardId))) {
+      await activateBoard(lastBoardId);
+      return;
+    }
+  } catch (error) {
+    console.error('LoreWeave: restoring the last board failed', error);
+  }
+  selectBoardDialogOpen.value = true;
 });
 
 onBeforeUnmount(() => {
@@ -309,6 +373,32 @@ onBeforeUnmount(() => {
 // Each `open*` guard refuses to open a dialog without the selection it needs.
 // Dialogs that mutate data additionally refuse to open for players — the
 // GM-only menu items are their entry points, this is the second lock.
+
+// Standalone-only board picker; the initial pick (no active board yet) is
+// not dismissable, switching later is.
+const selectBoardDialogOpen = ref(false);
+function openSelectBoardDialog() {
+  selectBoardDialogOpen.value = true;
+}
+function onBoardSelected(boardId: string) {
+  void activateBoard(boardId).catch((error) => {
+    // HTTP errors already toast via the interceptor; log for triage.
+    console.error('LoreWeave: activating the board failed', error);
+  });
+}
+
+// GM-only board settings (name, colours, graph options). The legend and the
+// graph styling follow the saved configuration immediately.
+const boardSettingsDialogOpen = ref(false);
+function openBoardSettingsDialog() {
+  if (!visibility.isGameMaster) return;
+  if (!activeBoard.value) return;
+  boardSettingsDialogOpen.value = true;
+}
+function onBoardUpdated(board: VersionedBoard) {
+  activeBoard.value = board;
+}
+
 const createDialogOpen = ref(false);
 function openCreateDialog() {
   if (!visibility.isGameMaster) return;
@@ -539,9 +629,49 @@ function openKnowEdgeDetailsDialog(edgeId: string) {
       :toCharacterName="selectedKnowEdgeToName"
     />
 
+    <BoardSettingsComponent
+      v-model:open="boardSettingsDialogOpen"
+      :loreWeaveApiService="loreWeaveApiService"
+      :boardId="activeBoard?.id ?? null"
+      @boardUpdated="onBoardUpdated"
+    />
+
+    <SelectBoardComponent
+      v-if="isStandalone"
+      v-model:open="selectBoardDialogOpen"
+      :loreWeaveApiService="loreWeaveApiService"
+      :dismissable="activeBoard !== null"
+      :activeBoardId="activeBoard?.id ?? null"
+      @boardSelected="onBoardSelected"
+    />
+
+    <div class="board-toolbar">
+      <span v-if="activeBoard" id="active-board-name" class="tag is-medium">
+        {{ activeBoard.name }}
+      </span>
+      <button
+        v-if="activeBoard && visibility.isGameMaster"
+        id="open-board-settings-button"
+        class="button is-small"
+        type="button"
+        @click="openBoardSettingsDialog"
+      >
+        Board settings
+      </button>
+      <button
+        v-if="isStandalone"
+        id="open-select-board-button"
+        class="button is-small"
+        type="button"
+        @click="openSelectBoardDialog"
+      >
+        Boards
+      </button>
+    </div>
+
     <NotificationListComponent :notificationService="notificationService" />
 
-    <GraphLegendComponent :isGameMaster="visibility.isGameMaster" />
+    <GraphLegendComponent :isGameMaster="visibility.isGameMaster" :palette="palette" />
 
     <button
       v-if="pathCharacterIds.length > 0"
@@ -577,6 +707,21 @@ function openKnowEdgeDetailsDialog(edgeId: string) {
   right: 1rem;
   bottom: 1rem;
   z-index: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Board name + board actions, anchored to the top-right corner. */
+.board-toolbar {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.board-toolbar .button {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 </style>

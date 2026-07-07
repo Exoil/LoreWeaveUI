@@ -9,6 +9,7 @@ import router from '@/router';
 import { MODULE_ID } from './constants';
 import {
   API_BASE_URL_KEY,
+  BOARD_RESOLVER_KEY,
   GRAPH_LAYOUT_STORAGE_KEY,
   GRAPH_LAYOUT_SYNC_KEY,
   GRAPH_REFRESH_KEY,
@@ -16,6 +17,7 @@ import {
   LINKED_DOCUMENT_UPDATER_KEY,
   SYSTEM_CHARACTER_ID_KEY,
 } from './injection-keys';
+import { createWorldBoardResolver } from './board-host';
 import { createSettingsGraphLayoutStorage } from './graph-layout-storage';
 import { createSettingsGraphVisibilityHost } from './graph-visibility-host';
 import { createSocketGraphLayoutSyncChannel } from './graph-layout-sync';
@@ -86,6 +88,12 @@ export class LoreWeaveApp extends ApplicationV2 {
     this.vueApp = createApp(RootComponent);
     this.vueApp.use(router).use(VNetworkGraph);
     this.vueApp.provide(API_BASE_URL_KEY, this.apiBaseUrl);
+    // Inside Foundry the board is correlated with the world — the user never
+    // picks one; App.vue awaits this resolver instead of showing the picker.
+    this.vueApp.provide(
+      BOARD_RESOLVER_KEY,
+      createWorldBoardResolver(() => this.apiBaseUrl),
+    );
     this.vueApp.provide(GRAPH_LAYOUT_STORAGE_KEY, createSettingsGraphLayoutStorage());
     this.vueApp.provide(GRAPH_VISIBILITY_HOST_KEY, createSettingsGraphVisibilityHost());
     this.vueApp.provide(GRAPH_LAYOUT_SYNC_KEY, createSocketGraphLayoutSyncChannel());

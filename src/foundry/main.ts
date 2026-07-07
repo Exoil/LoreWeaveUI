@@ -6,6 +6,7 @@
  */
 import { LoreWeaveApp } from './LoreWeaveApp';
 import { MODULE_ID } from './constants';
+import { BOARD_ID_SETTING } from './board-host';
 import { GRAPH_LAYOUT_SETTING } from './graph-layout-storage';
 import { HIDDEN_GRAPH_ITEMS_SETTING } from './graph-visibility-host';
 import {
@@ -75,6 +76,16 @@ Hooks.once('init', () => {
     config: true,
     type: String,
     default: 'http://localhost:8080',
+  });
+
+  // Backend board linked to this world, hidden from the settings sheet.
+  // World scope: the GM's client creates the board (named after the world)
+  // and stores its id here; players resolve the same board from it.
+  game.settings.register(MODULE_ID, BOARD_ID_SETTING, {
+    scope: 'world',
+    config: false,
+    type: String,
+    default: '',
   });
 
   // Cached graph node positions, hidden from the settings sheet. World scope:

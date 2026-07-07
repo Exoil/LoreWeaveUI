@@ -12,12 +12,47 @@ import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, CancelToken } fr
 
 export interface ILoreWeaveApiClient {
   /**
+   * Get all boards
+   * @return List of boards
+   */
+  getBoards(signal?: AbortSignal): Promise<SwaggerResponse<BoardDto[]>>;
+  /**
+   * Create a board
+   * @return Created
+   */
+  createBoard(body: CreateBoardDto, signal?: AbortSignal): Promise<SwaggerResponse<string>>;
+  /**
+   * Get board by id
+   * @param boardId Board identifier (one board per RPG game)
+   * @return Board found
+   */
+  getBoardById(boardId: string, signal?: AbortSignal): Promise<SwaggerResponse<BoardDto>>;
+  /**
+   * Update board name and configuration
+   * @param if_Match The ETag version to match, as an unsigned 16-bit integer (1..65535), optionally quoted.
+   * @param boardId Board identifier (one board per RPG game)
+   * @return No Content
+   */
+  updateBoard(
+    if_Match: string,
+    body: UpdateBoardDto,
+    boardId: string,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<void>>;
+  /**
+   * Delete a board and everything on it
+   * @param boardId Board identifier (one board per RPG game)
+   * @return No Content
+   */
+  deleteBoard(boardId: string, signal?: AbortSignal): Promise<SwaggerResponse<void>>;
+  /**
    * Get paged characters
    * @param pageNumber Page number (0-based or 1-based depending on server configuration)
    * @param pageSize Page size
    * @param sortType Field to sort by
    * @param sortOrder Sort direction (e.g., asc, desc)
    * @param nameFilter (optional) Filter for character name.
+   * @param boardId Board identifier (one board per RPG game)
    * @return List of characters
    */
   getPagedCharacters(
@@ -26,43 +61,63 @@ export interface ILoreWeaveApiClient {
     sortType: string,
     sortOrder: string,
     nameFilter: string | undefined,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<CharacterPayloadWithRelations[]>>;
   /**
    * Create a character
+   * @param boardId Board identifier (one board per RPG game)
    * @return Created
    */
-  createCharacter(body: CreateCharacterDto, signal?: AbortSignal): Promise<SwaggerResponse<string>>;
+  createCharacter(
+    body: CreateCharacterDto,
+    boardId: string,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<string>>;
   /**
    * Get character by id
    * @param id Character identifier
+   * @param boardId Board identifier (one board per RPG game)
    * @return Character found
    */
-  getCharacterById(id: string, signal?: AbortSignal): Promise<SwaggerResponse<CharacterDto>>;
+  getCharacterById(
+    id: string,
+    boardId: string,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<CharacterDto>>;
   /**
    * Update character
    * @param id Character identifier
    * @param if_Match The ETag version to match, as an unsigned 16-bit integer (1..65535), optionally quoted.
+   * @param boardId Board identifier (one board per RPG game)
    * @return No Content
    */
   updateCharacter(
     id: string,
     if_Match: string,
     body: UpdateCharacterDto,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<void>>;
   /**
    * Delete character
    * @param id Character identifier
+   * @param boardId Board identifier (one board per RPG game)
    * @return No Content
    */
-  deleteCharacter(id: string, signal?: AbortSignal): Promise<SwaggerResponse<void>>;
+  deleteCharacter(
+    id: string,
+    boardId: string,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<void>>;
   /**
    * Create a knowledge relationship between characters
+   * @param boardId Board identifier (one board per RPG game)
    * @return Created
    */
   createKnowRelationship(
     body: CreateKnowsDto,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<string>>;
   /**
@@ -70,23 +125,27 @@ export interface ILoreWeaveApiClient {
    * @param from Source character identifier
    * @param to Target character identifier
    * @param maxHops (optional) Maximum number of hops to traverse (default 10)
+   * @param boardId Board identifier (one board per RPG game)
    * @return Path found or empty path if no connection
    */
   findRelationBetweenCharacters(
     from: string,
     to: string,
     maxHops: number | undefined,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<RelationPathPayload>>;
   /**
    * Get the knowledge relationship between two characters
    * @param from Source character identifier
    * @param to Target character identifier
+   * @param boardId Board identifier (one board per RPG game)
    * @return Knowledge relationship found
    */
   getKnowRelationship(
     from: string,
     to: string,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<KnowRelationPayload>>;
   /**
@@ -94,6 +153,7 @@ export interface ILoreWeaveApiClient {
    * @param from Source character identifier
    * @param to Target character identifier
    * @param if_Match The ETag version to match, as an unsigned 16-bit integer (1..65535), optionally quoted.
+   * @param boardId Board identifier (one board per RPG game)
    * @return No Content
    */
   updateKnowRelationship(
@@ -101,71 +161,84 @@ export interface ILoreWeaveApiClient {
     to: string,
     if_Match: string,
     body: UpdateKnowsDto,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<void>>;
   /**
    * Delete a knowledge relationship
+   * @param boardId Board identifier (one board per RPG game)
    * @return No Content
    */
   deleteKnowRelationship(
     from: string,
     to: string,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<void>>;
   /**
    * Add a fact to a character.
    * @param id Character identifier
+   * @param boardId Board identifier (one board per RPG game)
    * @return Created
    */
   addFactToCharacter(
     id: string,
     body: CreateFactDto,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<string>>;
   /**
    * Get a fact by id.
    * @param id Character identifier
+   * @param boardId Board identifier (one board per RPG game)
    * @return Fact found
    */
-  getFact(id: string, signal?: AbortSignal): Promise<SwaggerResponse<FactDto>>;
+  getFact(id: string, boardId: string, signal?: AbortSignal): Promise<SwaggerResponse<FactDto>>;
   /**
    * Update a fact.
    * @param id Character identifier
    * @param if_Match The ETag version to match, as an unsigned 16-bit integer (1..65535), optionally quoted.
+   * @param boardId Board identifier (one board per RPG game)
    * @return No Content
    */
   updateFact(
     id: string,
     if_Match: string,
     body: UpdateFactDto,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<void>>;
   /**
    * Delete a fact by id.
    * @param id Character identifier
+   * @param boardId Board identifier (one board per RPG game)
    * @return No Content
    */
-  deleteFact(id: string, signal?: AbortSignal): Promise<SwaggerResponse<void>>;
+  deleteFact(id: string, boardId: string, signal?: AbortSignal): Promise<SwaggerResponse<void>>;
   /**
    * Connect an existing fact to an existing character.
    * @param characterId Character identifier
    * @param factId Fact identifier
+   * @param boardId Board identifier (one board per RPG game)
    * @return No Content
    */
   connectFactToCharacter(
     characterId: string,
     factId: string,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<void>>;
   /**
    * Delete the connection between a character and a fact.
    * @param characterId Character identifier
    * @param factId Fact identifier
+   * @param boardId Board identifier (one board per RPG game)
    * @return No Content
    */
   disconnectFactFromCharacter(
     characterId: string,
     factId: string,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<void>>;
 }
@@ -182,12 +255,406 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
   }
 
   /**
+   * Get all boards
+   * @return List of boards
+   */
+  getBoards(signal?: AbortSignal): Promise<SwaggerResponse<BoardDto[]>> {
+    let url_ = this.baseUrl + '/v1/boards';
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: AxiosRequestConfig = {
+      method: 'GET',
+      url: url_,
+      headers: {
+        Accept: 'application/json',
+      },
+      signal,
+    };
+
+    return this.instance
+      .request(options_)
+      .catch((_error: any) => {
+        if (isAxiosError(_error) && _error.response) {
+          return _error.response;
+        } else {
+          throw _error;
+        }
+      })
+      .then((_response: AxiosResponse) => {
+        return this.processGetBoards(_response);
+      });
+  }
+
+  protected processGetBoards(response: AxiosResponse): Promise<SwaggerResponse<BoardDto[]>> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && typeof response.headers === 'object') {
+      for (const k in response.headers) {
+        if (response.headers.hasOwnProperty(k)) {
+          _headers[k] = response.headers[k];
+        }
+      }
+    }
+    if (status === 200) {
+      const _responseText = response.data;
+      let result200: any = null;
+      let resultData200 = _responseText;
+      if (Array.isArray(resultData200)) {
+        result200 = [] as any;
+        for (let item of resultData200) result200!.push(BoardDto.fromJS(item));
+      } else {
+        result200 = null as any;
+      }
+      return Promise.resolve<SwaggerResponse<BoardDto[]>>(
+        new SwaggerResponse<BoardDto[]>(status, _headers, result200),
+      );
+    } else if (status !== 200 && status !== 204) {
+      const _responseText = response.data;
+      return throwException(
+        'An unexpected server error occurred.',
+        status,
+        _responseText,
+        _headers,
+      );
+    }
+    return Promise.resolve<SwaggerResponse<BoardDto[]>>(
+      new SwaggerResponse(status, _headers, null as any),
+    );
+  }
+
+  /**
+   * Create a board
+   * @return Created
+   */
+  createBoard(body: CreateBoardDto, signal?: AbortSignal): Promise<SwaggerResponse<string>> {
+    let url_ = this.baseUrl + '/v1/boards';
+    url_ = url_.replace(/[?&]$/, '');
+
+    const content_ = JSON.stringify(body);
+
+    let options_: AxiosRequestConfig = {
+      data: content_,
+      method: 'POST',
+      url: url_,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      signal,
+    };
+
+    return this.instance
+      .request(options_)
+      .catch((_error: any) => {
+        if (isAxiosError(_error) && _error.response) {
+          return _error.response;
+        } else {
+          throw _error;
+        }
+      })
+      .then((_response: AxiosResponse) => {
+        return this.processCreateBoard(_response);
+      });
+  }
+
+  protected processCreateBoard(response: AxiosResponse): Promise<SwaggerResponse<string>> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && typeof response.headers === 'object') {
+      for (const k in response.headers) {
+        if (response.headers.hasOwnProperty(k)) {
+          _headers[k] = response.headers[k];
+        }
+      }
+    }
+    if (status === 201) {
+      const _responseText = response.data;
+      let result201: any = null;
+      let resultData201 = _responseText;
+      result201 = resultData201 !== undefined ? resultData201 : (null as any);
+
+      return Promise.resolve<SwaggerResponse<string>>(
+        new SwaggerResponse<string>(status, _headers, result201),
+      );
+    } else if (status === 400) {
+      const _responseText = response.data;
+      let result400: any = null;
+      let resultData400 = _responseText;
+      result400 = ProblemDetails.fromJS(resultData400);
+      return throwException('Bad Request', status, _responseText, _headers, result400);
+    } else if (status !== 200 && status !== 204) {
+      const _responseText = response.data;
+      return throwException(
+        'An unexpected server error occurred.',
+        status,
+        _responseText,
+        _headers,
+      );
+    }
+    return Promise.resolve<SwaggerResponse<string>>(
+      new SwaggerResponse(status, _headers, null as any),
+    );
+  }
+
+  /**
+   * Get board by id
+   * @param boardId Board identifier (one board per RPG game)
+   * @return Board found
+   */
+  getBoardById(boardId: string, signal?: AbortSignal): Promise<SwaggerResponse<BoardDto>> {
+    let url_ = this.baseUrl + '/v1/boards/{boardId}';
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: AxiosRequestConfig = {
+      method: 'GET',
+      url: url_,
+      headers: {
+        Accept: 'application/json',
+      },
+      signal,
+    };
+
+    return this.instance
+      .request(options_)
+      .catch((_error: any) => {
+        if (isAxiosError(_error) && _error.response) {
+          return _error.response;
+        } else {
+          throw _error;
+        }
+      })
+      .then((_response: AxiosResponse) => {
+        return this.processGetBoardById(_response);
+      });
+  }
+
+  protected processGetBoardById(response: AxiosResponse): Promise<SwaggerResponse<BoardDto>> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && typeof response.headers === 'object') {
+      for (const k in response.headers) {
+        if (response.headers.hasOwnProperty(k)) {
+          _headers[k] = response.headers[k];
+        }
+      }
+    }
+    if (status === 200) {
+      const _responseText = response.data;
+      let result200: any = null;
+      let resultData200 = _responseText;
+      result200 = BoardDto.fromJS(resultData200);
+      return Promise.resolve<SwaggerResponse<BoardDto>>(
+        new SwaggerResponse<BoardDto>(status, _headers, result200),
+      );
+    } else if (status === 404) {
+      const _responseText = response.data;
+      let result404: any = null;
+      let resultData404 = _responseText;
+      result404 = ProblemDetails.fromJS(resultData404);
+      return throwException(
+        'The specified resource was not found',
+        status,
+        _responseText,
+        _headers,
+        result404,
+      );
+    } else if (status !== 200 && status !== 204) {
+      const _responseText = response.data;
+      return throwException(
+        'An unexpected server error occurred.',
+        status,
+        _responseText,
+        _headers,
+      );
+    }
+    return Promise.resolve<SwaggerResponse<BoardDto>>(
+      new SwaggerResponse(status, _headers, null as any),
+    );
+  }
+
+  /**
+   * Update board name and configuration
+   * @param if_Match The ETag version to match, as an unsigned 16-bit integer (1..65535), optionally quoted.
+   * @param boardId Board identifier (one board per RPG game)
+   * @return No Content
+   */
+  updateBoard(
+    if_Match: string,
+    body: UpdateBoardDto,
+    boardId: string,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<void>> {
+    let url_ = this.baseUrl + '/v1/boards/{boardId}';
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
+    url_ = url_.replace(/[?&]$/, '');
+
+    const content_ = JSON.stringify(body);
+
+    let options_: AxiosRequestConfig = {
+      data: content_,
+      method: 'PUT',
+      url: url_,
+      headers: {
+        'If-Match': if_Match !== undefined && if_Match !== null ? '' + if_Match : '',
+        'Content-Type': 'application/json',
+      },
+      signal,
+    };
+
+    return this.instance
+      .request(options_)
+      .catch((_error: any) => {
+        if (isAxiosError(_error) && _error.response) {
+          return _error.response;
+        } else {
+          throw _error;
+        }
+      })
+      .then((_response: AxiosResponse) => {
+        return this.processUpdateBoard(_response);
+      });
+  }
+
+  protected processUpdateBoard(response: AxiosResponse): Promise<SwaggerResponse<void>> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && typeof response.headers === 'object') {
+      for (const k in response.headers) {
+        if (response.headers.hasOwnProperty(k)) {
+          _headers[k] = response.headers[k];
+        }
+      }
+    }
+    if (status === 204) {
+      const _responseText = response.data;
+      return Promise.resolve<SwaggerResponse<void>>(
+        new SwaggerResponse<void>(status, _headers, null as any),
+      );
+    } else if (status === 400) {
+      const _responseText = response.data;
+      let result400: any = null;
+      let resultData400 = _responseText;
+      result400 = ProblemDetails.fromJS(resultData400);
+      return throwException('Bad Request', status, _responseText, _headers, result400);
+    } else if (status === 404) {
+      const _responseText = response.data;
+      let result404: any = null;
+      let resultData404 = _responseText;
+      result404 = ProblemDetails.fromJS(resultData404);
+      return throwException(
+        'The specified resource was not found',
+        status,
+        _responseText,
+        _headers,
+        result404,
+      );
+    } else if (status === 412) {
+      const _responseText = response.data;
+      let result412: any = null;
+      let resultData412 = _responseText;
+      result412 = ProblemDetails.fromJS(resultData412);
+      return throwException('Precondition Failed', status, _responseText, _headers, result412);
+    } else if (status !== 200 && status !== 204) {
+      const _responseText = response.data;
+      return throwException(
+        'An unexpected server error occurred.',
+        status,
+        _responseText,
+        _headers,
+      );
+    }
+    return Promise.resolve<SwaggerResponse<void>>(
+      new SwaggerResponse(status, _headers, null as any),
+    );
+  }
+
+  /**
+   * Delete a board and everything on it
+   * @param boardId Board identifier (one board per RPG game)
+   * @return No Content
+   */
+  deleteBoard(boardId: string, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
+    let url_ = this.baseUrl + '/v1/boards/{boardId}';
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
+    url_ = url_.replace(/[?&]$/, '');
+
+    let options_: AxiosRequestConfig = {
+      method: 'DELETE',
+      url: url_,
+      headers: {},
+      signal,
+    };
+
+    return this.instance
+      .request(options_)
+      .catch((_error: any) => {
+        if (isAxiosError(_error) && _error.response) {
+          return _error.response;
+        } else {
+          throw _error;
+        }
+      })
+      .then((_response: AxiosResponse) => {
+        return this.processDeleteBoard(_response);
+      });
+  }
+
+  protected processDeleteBoard(response: AxiosResponse): Promise<SwaggerResponse<void>> {
+    const status = response.status;
+    let _headers: any = {};
+    if (response.headers && typeof response.headers === 'object') {
+      for (const k in response.headers) {
+        if (response.headers.hasOwnProperty(k)) {
+          _headers[k] = response.headers[k];
+        }
+      }
+    }
+    if (status === 204) {
+      const _responseText = response.data;
+      return Promise.resolve<SwaggerResponse<void>>(
+        new SwaggerResponse<void>(status, _headers, null as any),
+      );
+    } else if (status === 404) {
+      const _responseText = response.data;
+      let result404: any = null;
+      let resultData404 = _responseText;
+      result404 = ProblemDetails.fromJS(resultData404);
+      return throwException(
+        'The specified resource was not found',
+        status,
+        _responseText,
+        _headers,
+        result404,
+      );
+    } else if (status !== 200 && status !== 204) {
+      const _responseText = response.data;
+      return throwException(
+        'An unexpected server error occurred.',
+        status,
+        _responseText,
+        _headers,
+      );
+    }
+    return Promise.resolve<SwaggerResponse<void>>(
+      new SwaggerResponse(status, _headers, null as any),
+    );
+  }
+
+  /**
    * Get paged characters
    * @param pageNumber Page number (0-based or 1-based depending on server configuration)
    * @param pageSize Page size
    * @param sortType Field to sort by
    * @param sortOrder Sort direction (e.g., asc, desc)
    * @param nameFilter (optional) Filter for character name.
+   * @param boardId Board identifier (one board per RPG game)
    * @return List of characters
    */
   getPagedCharacters(
@@ -196,9 +663,13 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
     sortType: string,
     sortOrder: string,
     nameFilter: string | undefined,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<CharacterPayloadWithRelations[]>> {
-    let url_ = this.baseUrl + '/v1/characters?';
+    let url_ = this.baseUrl + '/v1/boards/{boardId}/characters?';
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
     if (pageNumber === undefined || pageNumber === null)
       throw new globalThis.Error("The parameter 'pageNumber' must be defined and cannot be null.");
     else url_ += 'pageNumber=' + encodeURIComponent('' + pageNumber) + '&';
@@ -287,13 +758,18 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
 
   /**
    * Create a character
+   * @param boardId Board identifier (one board per RPG game)
    * @return Created
    */
   createCharacter(
     body: CreateCharacterDto,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<string>> {
-    let url_ = this.baseUrl + '/v1/characters';
+    let url_ = this.baseUrl + '/v1/boards/{boardId}/characters';
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
     url_ = url_.replace(/[?&]$/, '');
 
     const content_ = JSON.stringify(body);
@@ -365,13 +841,21 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
   /**
    * Get character by id
    * @param id Character identifier
+   * @param boardId Board identifier (one board per RPG game)
    * @return Character found
    */
-  getCharacterById(id: string, signal?: AbortSignal): Promise<SwaggerResponse<CharacterDto>> {
-    let url_ = this.baseUrl + '/v1/characters/{id}';
+  getCharacterById(
+    id: string,
+    boardId: string,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<CharacterDto>> {
+    let url_ = this.baseUrl + '/v1/boards/{boardId}/characters/{id}';
     if (id === undefined || id === null)
       throw new globalThis.Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
     url_ = url_.replace(/[?&]$/, '');
 
     let options_: AxiosRequestConfig = {
@@ -447,18 +931,23 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
    * Update character
    * @param id Character identifier
    * @param if_Match The ETag version to match, as an unsigned 16-bit integer (1..65535), optionally quoted.
+   * @param boardId Board identifier (one board per RPG game)
    * @return No Content
    */
   updateCharacter(
     id: string,
     if_Match: string,
     body: UpdateCharacterDto,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<void>> {
-    let url_ = this.baseUrl + '/v1/characters/{id}';
+    let url_ = this.baseUrl + '/v1/boards/{boardId}/characters/{id}';
     if (id === undefined || id === null)
       throw new globalThis.Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
     url_ = url_.replace(/[?&]$/, '');
 
     const content_ = JSON.stringify(body);
@@ -544,13 +1033,21 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
   /**
    * Delete character
    * @param id Character identifier
+   * @param boardId Board identifier (one board per RPG game)
    * @return No Content
    */
-  deleteCharacter(id: string, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
-    let url_ = this.baseUrl + '/v1/characters/{id}';
+  deleteCharacter(
+    id: string,
+    boardId: string,
+    signal?: AbortSignal,
+  ): Promise<SwaggerResponse<void>> {
+    let url_ = this.baseUrl + '/v1/boards/{boardId}/characters/{id}';
     if (id === undefined || id === null)
       throw new globalThis.Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
     url_ = url_.replace(/[?&]$/, '');
 
     let options_: AxiosRequestConfig = {
@@ -617,13 +1114,18 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
 
   /**
    * Create a knowledge relationship between characters
+   * @param boardId Board identifier (one board per RPG game)
    * @return Created
    */
   createKnowRelationship(
     body: CreateKnowsDto,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<string>> {
-    let url_ = this.baseUrl + '/v1/characters/knows';
+    let url_ = this.baseUrl + '/v1/boards/{boardId}/characters/knows';
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
     url_ = url_.replace(/[?&]$/, '');
 
     const content_ = JSON.stringify(body);
@@ -699,21 +1201,26 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
    * @param from Source character identifier
    * @param to Target character identifier
    * @param maxHops (optional) Maximum number of hops to traverse (default 10)
+   * @param boardId Board identifier (one board per RPG game)
    * @return Path found or empty path if no connection
    */
   findRelationBetweenCharacters(
     from: string,
     to: string,
     maxHops: number | undefined,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<RelationPathPayload>> {
-    let url_ = this.baseUrl + '/v1/characters/path/{from}/to/{to}?';
+    let url_ = this.baseUrl + '/v1/boards/{boardId}/characters/path/{from}/to/{to}?';
     if (from === undefined || from === null)
       throw new globalThis.Error("The parameter 'from' must be defined.");
     url_ = url_.replace('{from}', encodeURIComponent('' + from));
     if (to === undefined || to === null)
       throw new globalThis.Error("The parameter 'to' must be defined.");
     url_ = url_.replace('{to}', encodeURIComponent('' + to));
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
     if (maxHops === null) throw new globalThis.Error("The parameter 'maxHops' cannot be null.");
     else if (maxHops !== undefined) url_ += 'maxHops=' + encodeURIComponent('' + maxHops) + '&';
     url_ = url_.replace(/[?&]$/, '');
@@ -791,20 +1298,25 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
    * Get the knowledge relationship between two characters
    * @param from Source character identifier
    * @param to Target character identifier
+   * @param boardId Board identifier (one board per RPG game)
    * @return Knowledge relationship found
    */
   getKnowRelationship(
     from: string,
     to: string,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<KnowRelationPayload>> {
-    let url_ = this.baseUrl + '/v1/characters/knows/{from}/to/{to}';
+    let url_ = this.baseUrl + '/v1/boards/{boardId}/characters/knows/{from}/to/{to}';
     if (from === undefined || from === null)
       throw new globalThis.Error("The parameter 'from' must be defined.");
     url_ = url_.replace('{from}', encodeURIComponent('' + from));
     if (to === undefined || to === null)
       throw new globalThis.Error("The parameter 'to' must be defined.");
     url_ = url_.replace('{to}', encodeURIComponent('' + to));
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
     url_ = url_.replace(/[?&]$/, '');
 
     let options_: AxiosRequestConfig = {
@@ -881,6 +1393,7 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
    * @param from Source character identifier
    * @param to Target character identifier
    * @param if_Match The ETag version to match, as an unsigned 16-bit integer (1..65535), optionally quoted.
+   * @param boardId Board identifier (one board per RPG game)
    * @return No Content
    */
   updateKnowRelationship(
@@ -888,15 +1401,19 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
     to: string,
     if_Match: string,
     body: UpdateKnowsDto,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<void>> {
-    let url_ = this.baseUrl + '/v1/characters/knows/{from}/to/{to}';
+    let url_ = this.baseUrl + '/v1/boards/{boardId}/characters/knows/{from}/to/{to}';
     if (from === undefined || from === null)
       throw new globalThis.Error("The parameter 'from' must be defined.");
     url_ = url_.replace('{from}', encodeURIComponent('' + from));
     if (to === undefined || to === null)
       throw new globalThis.Error("The parameter 'to' must be defined.");
     url_ = url_.replace('{to}', encodeURIComponent('' + to));
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
     url_ = url_.replace(/[?&]$/, '');
 
     const content_ = JSON.stringify(body);
@@ -981,20 +1498,25 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
 
   /**
    * Delete a knowledge relationship
+   * @param boardId Board identifier (one board per RPG game)
    * @return No Content
    */
   deleteKnowRelationship(
     from: string,
     to: string,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<void>> {
-    let url_ = this.baseUrl + '/v1/characters/knows/{from}/to/{to}';
+    let url_ = this.baseUrl + '/v1/boards/{boardId}/characters/knows/{from}/to/{to}';
     if (from === undefined || from === null)
       throw new globalThis.Error("The parameter 'from' must be defined.");
     url_ = url_.replace('{from}', encodeURIComponent('' + from));
     if (to === undefined || to === null)
       throw new globalThis.Error("The parameter 'to' must be defined.");
     url_ = url_.replace('{to}', encodeURIComponent('' + to));
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
     url_ = url_.replace(/[?&]$/, '');
 
     let options_: AxiosRequestConfig = {
@@ -1062,17 +1584,22 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
   /**
    * Add a fact to a character.
    * @param id Character identifier
+   * @param boardId Board identifier (one board per RPG game)
    * @return Created
    */
   addFactToCharacter(
     id: string,
     body: CreateFactDto,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<string>> {
-    let url_ = this.baseUrl + '/v1/characters/{id}/facts';
+    let url_ = this.baseUrl + '/v1/boards/{boardId}/characters/{id}/facts';
     if (id === undefined || id === null)
       throw new globalThis.Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
     url_ = url_.replace(/[?&]$/, '');
 
     const content_ = JSON.stringify(body);
@@ -1156,13 +1683,17 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
   /**
    * Get a fact by id.
    * @param id Character identifier
+   * @param boardId Board identifier (one board per RPG game)
    * @return Fact found
    */
-  getFact(id: string, signal?: AbortSignal): Promise<SwaggerResponse<FactDto>> {
-    let url_ = this.baseUrl + '/v1/facts/{id}';
+  getFact(id: string, boardId: string, signal?: AbortSignal): Promise<SwaggerResponse<FactDto>> {
+    let url_ = this.baseUrl + '/v1/boards/{boardId}/facts/{id}';
     if (id === undefined || id === null)
       throw new globalThis.Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
     url_ = url_.replace(/[?&]$/, '');
 
     let options_: AxiosRequestConfig = {
@@ -1236,18 +1767,23 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
    * Update a fact.
    * @param id Character identifier
    * @param if_Match The ETag version to match, as an unsigned 16-bit integer (1..65535), optionally quoted.
+   * @param boardId Board identifier (one board per RPG game)
    * @return No Content
    */
   updateFact(
     id: string,
     if_Match: string,
     body: UpdateFactDto,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<void>> {
-    let url_ = this.baseUrl + '/v1/facts/{id}';
+    let url_ = this.baseUrl + '/v1/boards/{boardId}/facts/{id}';
     if (id === undefined || id === null)
       throw new globalThis.Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
     url_ = url_.replace(/[?&]$/, '');
 
     const content_ = JSON.stringify(body);
@@ -1333,13 +1869,17 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
   /**
    * Delete a fact by id.
    * @param id Character identifier
+   * @param boardId Board identifier (one board per RPG game)
    * @return No Content
    */
-  deleteFact(id: string, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
-    let url_ = this.baseUrl + '/v1/facts/{id}';
+  deleteFact(id: string, boardId: string, signal?: AbortSignal): Promise<SwaggerResponse<void>> {
+    let url_ = this.baseUrl + '/v1/boards/{boardId}/facts/{id}';
     if (id === undefined || id === null)
       throw new globalThis.Error("The parameter 'id' must be defined.");
     url_ = url_.replace('{id}', encodeURIComponent('' + id));
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
     url_ = url_.replace(/[?&]$/, '');
 
     let options_: AxiosRequestConfig = {
@@ -1408,20 +1948,25 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
    * Connect an existing fact to an existing character.
    * @param characterId Character identifier
    * @param factId Fact identifier
+   * @param boardId Board identifier (one board per RPG game)
    * @return No Content
    */
   connectFactToCharacter(
     characterId: string,
     factId: string,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<void>> {
-    let url_ = this.baseUrl + '/v1/characters/{characterId}/facts/{factId}';
+    let url_ = this.baseUrl + '/v1/boards/{boardId}/characters/{characterId}/facts/{factId}';
     if (characterId === undefined || characterId === null)
       throw new globalThis.Error("The parameter 'characterId' must be defined.");
     url_ = url_.replace('{characterId}', encodeURIComponent('' + characterId));
     if (factId === undefined || factId === null)
       throw new globalThis.Error("The parameter 'factId' must be defined.");
     url_ = url_.replace('{factId}', encodeURIComponent('' + factId));
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
     url_ = url_.replace(/[?&]$/, '');
 
     let options_: AxiosRequestConfig = {
@@ -1502,20 +2047,25 @@ export class LoreWeaveApiClient implements ILoreWeaveApiClient {
    * Delete the connection between a character and a fact.
    * @param characterId Character identifier
    * @param factId Fact identifier
+   * @param boardId Board identifier (one board per RPG game)
    * @return No Content
    */
   disconnectFactFromCharacter(
     characterId: string,
     factId: string,
+    boardId: string,
     signal?: AbortSignal,
   ): Promise<SwaggerResponse<void>> {
-    let url_ = this.baseUrl + '/v1/characters/{characterId}/facts/{factId}';
+    let url_ = this.baseUrl + '/v1/boards/{boardId}/characters/{characterId}/facts/{factId}';
     if (characterId === undefined || characterId === null)
       throw new globalThis.Error("The parameter 'characterId' must be defined.");
     url_ = url_.replace('{characterId}', encodeURIComponent('' + characterId));
     if (factId === undefined || factId === null)
       throw new globalThis.Error("The parameter 'factId' must be defined.");
     url_ = url_.replace('{factId}', encodeURIComponent('' + factId));
+    if (boardId === undefined || boardId === null)
+      throw new globalThis.Error("The parameter 'boardId' must be defined.");
+    url_ = url_.replace('{boardId}', encodeURIComponent('' + boardId));
     url_ = url_.replace(/[?&]$/, '');
 
     let options_: AxiosRequestConfig = {
@@ -1640,6 +2190,274 @@ export interface IProblemDetails {
   status: number | undefined;
   detail: string | undefined;
   instance: string | undefined;
+
+  [key: string]: any;
+}
+
+/** Per-board visual configuration of the graph. Colours are 6-digit hex values; the remaining fields map onto v-network-graph view options. */
+export class BoardConfigurationDto implements IBoardConfigurationDto {
+  /** Fill colour of character nodes (hex, e.g. "#4466cc") */
+  characterNodeColor!: string;
+  /** Fill colour of fact nodes (hex) */
+  factNodeColor!: string;
+  /** Colour of character-to-character relation edges (hex) */
+  relationEdgeColor!: string;
+  /** Colour of character-to-fact connection edges (hex) */
+  factEdgeColor!: string;
+  /** Colour of nodes/edges on a found relation path (hex) */
+  pathHighlightColor!: string;
+  /** Radius of character nodes in pixels (fact nodes scale down proportionally) */
+  nodeRadius!: number;
+  /** Stroke width of relation edges in pixels */
+  edgeWidth!: number;
+  /** Render edges as curves (true) or straight lines (false) */
+  curvedEdges!: boolean;
+  /** Whether the background grid is visible */
+  showGrid!: boolean;
+  /** Whether zooming scales nodes/edges/labels together like a map */
+  scalingObjects!: boolean;
+
+  [key: string]: any;
+
+  constructor(data?: IBoardConfigurationDto) {
+    if (data) {
+      for (var property in data) {
+        if (data.hasOwnProperty(property)) (this as any)[property] = (data as any)[property];
+      }
+    }
+  }
+
+  init(_data?: any) {
+    if (_data) {
+      for (var property in _data) {
+        if (_data.hasOwnProperty(property)) this[property] = _data[property];
+      }
+      this.characterNodeColor = _data['characterNodeColor'];
+      this.factNodeColor = _data['factNodeColor'];
+      this.relationEdgeColor = _data['relationEdgeColor'];
+      this.factEdgeColor = _data['factEdgeColor'];
+      this.pathHighlightColor = _data['pathHighlightColor'];
+      this.nodeRadius = _data['nodeRadius'];
+      this.edgeWidth = _data['edgeWidth'];
+      this.curvedEdges = _data['curvedEdges'];
+      this.showGrid = _data['showGrid'];
+      this.scalingObjects = _data['scalingObjects'];
+    }
+  }
+
+  static fromJS(data: any): BoardConfigurationDto {
+    data = typeof data === 'object' ? data : {};
+    let result = new BoardConfigurationDto();
+    result.init(data);
+    return result;
+  }
+
+  toJSON(data?: any) {
+    data = typeof data === 'object' ? data : {};
+    for (var property in this) {
+      if (this.hasOwnProperty(property)) data[property] = this[property];
+    }
+    data['characterNodeColor'] = this.characterNodeColor;
+    data['factNodeColor'] = this.factNodeColor;
+    data['relationEdgeColor'] = this.relationEdgeColor;
+    data['factEdgeColor'] = this.factEdgeColor;
+    data['pathHighlightColor'] = this.pathHighlightColor;
+    data['nodeRadius'] = this.nodeRadius;
+    data['edgeWidth'] = this.edgeWidth;
+    data['curvedEdges'] = this.curvedEdges;
+    data['showGrid'] = this.showGrid;
+    data['scalingObjects'] = this.scalingObjects;
+    return data;
+  }
+}
+
+/** Per-board visual configuration of the graph. Colours are 6-digit hex values; the remaining fields map onto v-network-graph view options. */
+export interface IBoardConfigurationDto {
+  /** Fill colour of character nodes (hex, e.g. "#4466cc") */
+  characterNodeColor: string;
+  /** Fill colour of fact nodes (hex) */
+  factNodeColor: string;
+  /** Colour of character-to-character relation edges (hex) */
+  relationEdgeColor: string;
+  /** Colour of character-to-fact connection edges (hex) */
+  factEdgeColor: string;
+  /** Colour of nodes/edges on a found relation path (hex) */
+  pathHighlightColor: string;
+  /** Radius of character nodes in pixels (fact nodes scale down proportionally) */
+  nodeRadius: number;
+  /** Stroke width of relation edges in pixels */
+  edgeWidth: number;
+  /** Render edges as curves (true) or straight lines (false) */
+  curvedEdges: boolean;
+  /** Whether the background grid is visible */
+  showGrid: boolean;
+  /** Whether zooming scales nodes/edges/labels together like a map */
+  scalingObjects: boolean;
+
+  [key: string]: any;
+}
+
+export class BoardDto implements IBoardDto {
+  /** Board identifier */
+  id!: string;
+  /** Board name (typically the RPG game/world name) */
+  name!: string;
+  configuration!: BoardConfigurationDto;
+
+  [key: string]: any;
+
+  constructor(data?: IBoardDto) {
+    if (data) {
+      for (var property in data) {
+        if (data.hasOwnProperty(property)) (this as any)[property] = (data as any)[property];
+      }
+    }
+    if (!data) {
+      this.configuration = new BoardConfigurationDto();
+    }
+  }
+
+  init(_data?: any) {
+    if (_data) {
+      for (var property in _data) {
+        if (_data.hasOwnProperty(property)) this[property] = _data[property];
+      }
+      this.id = _data['id'];
+      this.name = _data['name'];
+      this.configuration = _data['configuration']
+        ? BoardConfigurationDto.fromJS(_data['configuration'])
+        : new BoardConfigurationDto();
+    }
+  }
+
+  static fromJS(data: any): BoardDto {
+    data = typeof data === 'object' ? data : {};
+    let result = new BoardDto();
+    result.init(data);
+    return result;
+  }
+
+  toJSON(data?: any) {
+    data = typeof data === 'object' ? data : {};
+    for (var property in this) {
+      if (this.hasOwnProperty(property)) data[property] = this[property];
+    }
+    data['id'] = this.id;
+    data['name'] = this.name;
+    data['configuration'] = this.configuration ? this.configuration.toJSON() : (undefined as any);
+    return data;
+  }
+}
+
+export interface IBoardDto {
+  /** Board identifier */
+  id: string;
+  /** Board name (typically the RPG game/world name) */
+  name: string;
+  configuration: BoardConfigurationDto;
+
+  [key: string]: any;
+}
+
+export class CreateBoardDto implements ICreateBoardDto {
+  /** Board name (typically the RPG game/world name) */
+  name!: string;
+
+  [key: string]: any;
+
+  constructor(data?: ICreateBoardDto) {
+    if (data) {
+      for (var property in data) {
+        if (data.hasOwnProperty(property)) (this as any)[property] = (data as any)[property];
+      }
+    }
+  }
+
+  init(_data?: any) {
+    if (_data) {
+      for (var property in _data) {
+        if (_data.hasOwnProperty(property)) this[property] = _data[property];
+      }
+      this.name = _data['name'];
+    }
+  }
+
+  static fromJS(data: any): CreateBoardDto {
+    data = typeof data === 'object' ? data : {};
+    let result = new CreateBoardDto();
+    result.init(data);
+    return result;
+  }
+
+  toJSON(data?: any) {
+    data = typeof data === 'object' ? data : {};
+    for (var property in this) {
+      if (this.hasOwnProperty(property)) data[property] = this[property];
+    }
+    data['name'] = this.name;
+    return data;
+  }
+}
+
+export interface ICreateBoardDto {
+  /** Board name (typically the RPG game/world name) */
+  name: string;
+
+  [key: string]: any;
+}
+
+export class UpdateBoardDto implements IUpdateBoardDto {
+  /** Board name (typically the RPG game/world name) */
+  name!: string;
+  configuration!: BoardConfigurationDto;
+
+  [key: string]: any;
+
+  constructor(data?: IUpdateBoardDto) {
+    if (data) {
+      for (var property in data) {
+        if (data.hasOwnProperty(property)) (this as any)[property] = (data as any)[property];
+      }
+    }
+    if (!data) {
+      this.configuration = new BoardConfigurationDto();
+    }
+  }
+
+  init(_data?: any) {
+    if (_data) {
+      for (var property in _data) {
+        if (_data.hasOwnProperty(property)) this[property] = _data[property];
+      }
+      this.name = _data['name'];
+      this.configuration = _data['configuration']
+        ? BoardConfigurationDto.fromJS(_data['configuration'])
+        : new BoardConfigurationDto();
+    }
+  }
+
+  static fromJS(data: any): UpdateBoardDto {
+    data = typeof data === 'object' ? data : {};
+    let result = new UpdateBoardDto();
+    result.init(data);
+    return result;
+  }
+
+  toJSON(data?: any) {
+    data = typeof data === 'object' ? data : {};
+    for (var property in this) {
+      if (this.hasOwnProperty(property)) data[property] = this[property];
+    }
+    data['name'] = this.name;
+    data['configuration'] = this.configuration ? this.configuration.toJSON() : (undefined as any);
+    return data;
+  }
+}
+
+export interface IUpdateBoardDto {
+  /** Board name (typically the RPG game/world name) */
+  name: string;
+  configuration: BoardConfigurationDto;
 
   [key: string]: any;
 }

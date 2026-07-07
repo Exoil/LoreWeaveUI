@@ -1,20 +1,22 @@
 <script setup lang="ts">
 /**
  * Collapsible colour legend for the graph, anchored to the bottom-left corner.
- * The swatches are driven by {@link GRAPH_PALETTE} so they can never drift
- * from the actual graph styling. The "Hidden from players" section describes
- * the GM-only washed-out colours and is rendered exclusively for the GM —
- * players never learn that hiding exists.
+ * The swatches are driven by the `palette` prop — the same effective palette
+ * `useGraphConfiguration` styles the graph with (board colours included), so
+ * the legend always reflects what the GM configured and can never drift. The
+ * "Hidden from players" section describes the GM-only washed-out colours and
+ * is rendered exclusively for the GM — players never learn that hiding exists.
  */
 import { computed, ref } from 'vue';
 import {
-  GRAPH_PALETTE,
+  type GraphPalette,
   WEAK_EDGE_DASHARRAY,
   FACT_EDGE_DASHARRAY,
 } from '@/composables/useGraphConfiguration';
 
 const props = defineProps<{
   isGameMaster: boolean;
+  palette: GraphPalette;
 }>();
 
 const open = ref(false);
@@ -50,38 +52,38 @@ const sections = computed<LegendSection[]>(() => {
           id: 'character-node',
           label: 'Character',
           swatch: 'node',
-          color: GRAPH_PALETTE.characterNode,
+          color: props.palette.characterNode,
         },
         {
           id: 'fact-node',
           label: 'Fact',
           swatch: 'node',
-          color: GRAPH_PALETTE.factNode,
+          color: props.palette.factNode,
           small: true,
         },
         {
           id: 'path-node',
           label: 'On found path',
           swatch: 'node',
-          color: GRAPH_PALETTE.pathHighlight,
+          color: props.palette.pathHighlight,
         },
         {
           id: 'first-selected',
           label: 'First selected',
           swatch: 'ring',
-          color: GRAPH_PALETTE.firstSelectedStroke,
+          color: props.palette.firstSelectedStroke,
         },
         {
           id: 'second-selected',
           label: 'Second selected',
           swatch: 'ring',
-          color: GRAPH_PALETTE.secondSelectedStroke,
+          color: props.palette.secondSelectedStroke,
         },
         {
           id: 'fact-selected',
           label: 'Selected fact',
           swatch: 'ring',
-          color: GRAPH_PALETTE.factSelectedStroke,
+          color: props.palette.factSelectedStroke,
         },
       ],
     },
@@ -92,34 +94,34 @@ const sections = computed<LegendSection[]>(() => {
           id: 'strong-relation',
           label: 'Strong relation',
           swatch: 'line',
-          color: GRAPH_PALETTE.relationEdge,
+          color: props.palette.relationEdge,
         },
         {
           id: 'weak-relation',
           label: 'Weak relation',
           swatch: 'line',
-          color: GRAPH_PALETTE.relationEdge,
+          color: props.palette.relationEdge,
           dash: WEAK_EDGE_DASHARRAY,
         },
         {
           id: 'selected-pair-edge',
           label: 'Between selected pair',
           swatch: 'line',
-          color: GRAPH_PALETTE.selectedPairEdge,
+          color: props.palette.selectedPairEdge,
           width: 5,
         },
         {
           id: 'path-edge',
           label: 'On found path',
           swatch: 'line',
-          color: GRAPH_PALETTE.pathHighlight,
+          color: props.palette.pathHighlight,
           width: 5,
         },
         {
           id: 'fact-edge',
           label: 'Fact connection',
           swatch: 'line',
-          color: GRAPH_PALETTE.factEdge,
+          color: props.palette.factEdge,
           dash: FACT_EDGE_DASHARRAY,
           width: 2,
         },
@@ -135,20 +137,20 @@ const sections = computed<LegendSection[]>(() => {
           id: 'hidden-character',
           label: 'Hidden character',
           swatch: 'node',
-          color: GRAPH_PALETTE.hiddenNode,
+          color: props.palette.hiddenNode,
         },
         {
           id: 'hidden-fact',
           label: 'Hidden fact',
           swatch: 'node',
-          color: GRAPH_PALETTE.hiddenFactNode,
+          color: props.palette.hiddenFactNode,
           small: true,
         },
         {
           id: 'hidden-edge',
           label: 'Hidden relation / connection',
           swatch: 'line',
-          color: GRAPH_PALETTE.hiddenEdge,
+          color: props.palette.hiddenEdge,
         },
       ],
     });

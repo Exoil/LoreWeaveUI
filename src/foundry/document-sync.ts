@@ -4,6 +4,7 @@ import { UpdateCharacter } from '@/services/Models/UpdateCharacter';
 import { UpdateFact } from '@/services/Models/UpdateFact';
 import { parseHiddenGraphItems } from '@/composables/useGraphVisibility';
 import { MODULE_ID } from './constants';
+import { ensureWorldBoardAsync } from './board-host';
 import { ActorCharacter } from './ActorCharacter';
 import { JournalFact, EMPTY_JOURNAL_FACT_CONTENT } from './JournalFact';
 import { HIDDEN_GRAPH_ITEMS_SETTING } from './graph-visibility-host';
@@ -222,12 +223,16 @@ export function createSettingsGraphRefreshSource(): GraphRefreshSource {
 /**
  * A fresh API service per operation: sync events are rare, and rebuilding the
  * service means an apiBaseUrl change is always picked up. HTTP errors surface
- * in Foundry's toaster instead of the (possibly closed) Vue window.
+ * in Foundry's toaster instead of the (possibly closed) Vue window. The
+ * service is scoped to the world's board (created on first use — only the
+ * GM's client runs sync operations, and the GM may create boards).
  */
-function makeService(getApiBaseUrl: () => string): LoreWeaveApiService {
+async function makeServiceAsync(getApiBaseUrl: () => string): Promise<LoreWeaveApiService> {
   const notifications = new NotificationService();
   notifications.onNotification((n) => ui.notifications?.error(`LoreWeave sync: ${n.message}`));
-  return new LoreWeaveApiService(getApiBaseUrl(), notifications);
+  const service = new LoreWeaveApiService(getApiBaseUrl(), notifications);
+  service.setActiveBoard(await ensureWorldBoardAsync(getApiBaseUrl));
+  return service;
 }
 
 /**
@@ -254,7 +259,8 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
     runSync('createActor', async () => {
       const links = loadLinks();
       if (links.actors[actor.actorId]) return; // already linked (re-fired hook)
-      const characterId = await makeService(getApiBaseUrl).createCharacterAsync(actor.name);
+      const service = await makeServiceAsync(getApiBaseUrl);
+      const characterId = await service.createCharacterAsync(actor.name);
       links.actors[actor.actorId] = characterId;
       await saveLinks(links);
       await bumpGraphRevision({ kind: 'character', action: 'created', characterId });
@@ -269,7 +275,7 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
     runSync('updateActor', async () => {
       const characterId = loadLinks().actors[actor.actorId];
       if (!characterId) return; // actor predates the module — not linked
-      const service = makeService(getApiBaseUrl);
+      const service = await makeServiceAsync(getApiBaseUrl);
       // Renames need the character's current version (ETag) for the
       // backend's optimistic-concurrency check.
       const current = await service.getCharacterAsync(characterId);
@@ -290,7 +296,8 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
       const links = loadLinks();
       const characterId = links.actors[actor.actorId];
       if (!characterId) return;
-      await makeService(getApiBaseUrl).deleteCharacterAsync(characterId);
+      const service = await makeServiceAsync(getApiBaseUrl);
+      await service.deleteCharacterAsync(characterId);
       delete links.actors[actor.actorId];
       await saveLinks(links);
       await bumpGraphRevision({ kind: 'character', action: 'deleted', characterId });
@@ -310,8 +317,10 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
     const links = loadLinks();
     if (links.systemCharacterId) {
       // Probe with a notification-less service: a 404 here is a normal
-      // negative answer, not an error to toast at the GM.
+      // negative answer, not an error to toast at the GM. Same board as the
+      // syncing service — the system character lives on the world's board.
       const probe = new LoreWeaveApiService(getApiBaseUrl());
+      probe.setActiveBoard(service.activeBoardId);
       if (await probe.characterExistsAsync(links.systemCharacterId)) {
         return links.systemCharacterId;
       }
@@ -330,7 +339,7 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
     runSync('createJournalEntry', async () => {
       const links = loadLinks();
       if (links.journals[fact.journalId]) return;
-      const service = makeService(getApiBaseUrl);
+      const service = await makeServiceAsync(getApiBaseUrl);
       const systemCharacterId = await ensureSystemCharacterAsync(service);
       const factId = await service.addFactToCharacterAsync(
         systemCharacterId,
@@ -360,7 +369,7 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
     runSync('updateJournalEntry', async () => {
       const factId = loadLinks().journals[fact.journalId];
       if (!factId) return;
-      const service = makeService(getApiBaseUrl);
+      const service = await makeServiceAsync(getApiBaseUrl);
       const current = await service.getFactAsync(factId);
       // Loop breaker: a graph-side fact edit mirrored onto the journal
       // re-fires this hook with a title the backend already has.
@@ -379,7 +388,8 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
       const links = loadLinks();
       const factId = links.journals[fact.journalId];
       if (!factId) return;
-      await makeService(getApiBaseUrl).deleteFactAsync(factId);
+      const service = await makeServiceAsync(getApiBaseUrl);
+      await service.deleteFactAsync(factId);
       delete links.journals[fact.journalId];
       await saveLinks(links);
       await bumpGraphRevision({ kind: 'fact', action: 'deleted', factId });
@@ -401,7 +411,7 @@ export function registerDocumentSyncHooks(getApiBaseUrl: () => string): void {
     runSync(operation, async () => {
       const factId = loadLinks().journals[fact.journalId];
       if (!factId) return;
-      const service = makeService(getApiBaseUrl);
+      const service = await makeServiceAsync(getApiBaseUrl);
       const current = await service.getFactAsync(factId);
       if (current.content === fact.content) return;
       await service.updateFactAsync(
