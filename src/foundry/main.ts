@@ -21,10 +21,18 @@ export { MODULE_ID };
 // expensive to rebuild, so we keep one across open/close cycles.
 let appInstance: LoreWeaveApp | null = null;
 
-/** Read the configured backend base URL from world settings (''. if unset/invalid). */
+/**
+ * Read the configured backend base URL from world settings. When unset (the
+ * default), fall back to the page's own origin: the docker-compose gateway
+ * serves Foundry and the API from one host, so "same origin as the page"
+ * is correct both locally (http://localhost:8080) and through a
+ * port-forwarding app — each client resolves its own reachable address, and
+ * new worlds work without any configuration.
+ */
 function getApiBaseUrl(): string {
   const value = game.settings.get(MODULE_ID, 'apiBaseUrl');
-  return typeof value === 'string' ? value : '';
+  const configured = typeof value === 'string' ? value.trim() : '';
+  return configured || window.location.origin;
 }
 
 /** Lazily create (and reuse) the single {@link LoreWeaveApp} window instance. */
@@ -75,7 +83,10 @@ Hooks.once('init', () => {
     scope: 'world',
     config: true,
     type: String,
-    default: 'http://localhost:8080',
+    // Blank means "same origin as the Foundry page" (see getApiBaseUrl) —
+    // correct whenever Foundry is reached through the gateway, which proxies
+    // both the UI and /v1/. Only set this when the API lives elsewhere.
+    default: '',
   });
 
   // Backend board linked to this world, hidden from the settings sheet.

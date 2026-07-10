@@ -29,6 +29,7 @@ import type { VersionedCharacter } from '@/services/Models/VersionedCharacter';
 import type { VersionedFact } from '@/services/Models/VersionedFact';
 import NotificationListComponent from '@/components/NotificationListComponent.vue';
 import GraphLegendComponent from '@/components/GraphLegendComponent.vue';
+import HelpManualComponent from '@/components/HelpManualComponent.vue';
 import BoardSettingsComponent from '@/components/BoardSettingsComponent.vue';
 import SelectBoardComponent from '@/components/SelectBoardComponent.vue';
 import NodeContextMenuComponent from '@/components/menus/NodeContextMenuComponent.vue';
@@ -399,6 +400,12 @@ function onBoardUpdated(board: VersionedBoard) {
   activeBoard.value = board;
 }
 
+// User manual; open to everyone — its GM-only sections hide themselves.
+const helpDialogOpen = ref(false);
+function openHelpDialog() {
+  helpDialogOpen.value = true;
+}
+
 const createDialogOpen = ref(false);
 function openCreateDialog() {
   if (!visibility.isGameMaster) return;
@@ -667,7 +674,18 @@ function openKnowEdgeDetailsDialog(edgeId: string) {
       >
         Boards
       </button>
+      <button
+        id="open-help-button"
+        class="button is-small"
+        type="button"
+        title="How to use LoreWeave"
+        @click="openHelpDialog"
+      >
+        Help
+      </button>
     </div>
+
+    <HelpManualComponent v-model:open="helpDialogOpen" :isGameMaster="visibility.isGameMaster" />
 
     <NotificationListComponent :notificationService="notificationService" />
 
