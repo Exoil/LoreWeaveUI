@@ -3,5 +3,5 @@
   "loreweaveui.controls.open": "Open LoreWeave",
   "loreweaveui.controls.tooltip": "Open the character-relationship graph",
   "loreweaveui.settings.apiBaseUrl.name": "Backend API base URL",
-  "loreweaveui.settings.apiBaseUrl.hint": "URL the module uses to reach the RpgAssistant backend API (the nginx gateway). Default points at the local docker-compose gateway."
+  "loreweaveui.settings.apiBaseUrl.hint": "Leave blank to connect automatically. Only fill this in if the backend runs at a different address."
 }
