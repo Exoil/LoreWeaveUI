@@ -258,7 +258,9 @@ onBeforeUnmount(() => {
           >
             Save
           </button>
-          <button class="button is-ghost" @click="onClickCancel">Cancel</button>
+          <button id="board-settings-cancel-button" class="button is-ghost" @click="onClickCancel">
+            Cancel
+          </button>
         </div>
       </footer>
     </div>

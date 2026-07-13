@@ -1,5 +1,6 @@
 import axios, { isAxiosError } from 'axios';
 import {
+  ApiException,
   type BoardDto,
   BoardConfigurationDto,
   type CharacterPayloadWithRelations,
@@ -179,6 +180,9 @@ export class LoreWeaveApiService {
       return true;
     } catch (error) {
       if (isAxiosError(error) && error.response?.status === 404) return false;
+      // The NSwag client rethrows non-2xx responses as ApiException, so the
+      // axios guard above never sees them.
+      if (ApiException.isApiException(error) && error.status === 404) return false;
       throw error;
     }
   }
@@ -255,6 +259,9 @@ export class LoreWeaveApiService {
       return true;
     } catch (error) {
       if (isAxiosError(error) && error.response?.status === 404) return false;
+      // The NSwag client rethrows non-2xx responses as ApiException, so the
+      // axios guard above never sees them.
+      if (ApiException.isApiException(error) && error.status === 404) return false;
       throw error;
     }
   }

@@ -499,7 +499,11 @@ function openKnowEdgeDetailsDialog(edgeId: string) {
 </script>
 
 <template>
-  <div class="app">
+  <!-- theme-dark pins Bulma's palette to dark for the whole subtree
+       (modals, dropdowns, buttons) regardless of the OS color scheme —
+       the light theme renders unreadable text inside Foundry's dark UI.
+       The graph canvas itself stays white (.graph-host). -->
+  <div class="app theme-dark">
     <v-network-graph
       class="graph-host"
       :nodes="nodesForGraph"

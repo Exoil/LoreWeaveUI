@@ -51,7 +51,12 @@ defineExpose({
     >
       <div class="dropdown-menu" role="menu">
         <div class="dropdown-content">
-          <button class="dropdown-item" type="button" @click="onCreateClick">
+          <button
+            id="view-context-create-character-button"
+            class="dropdown-item"
+            type="button"
+            @click="onCreateClick"
+          >
             Create character
           </button>
         </div>
