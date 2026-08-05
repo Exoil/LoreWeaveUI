@@ -91,7 +91,11 @@ onBeforeUnmount(() => {
           >
             Create
           </button>
-          <button id="create-character-node-cancel-button" class="button is-ghost" @click="onClickCancel">
+          <button
+            id="create-character-node-cancel-button"
+            class="button is-ghost"
+            @click="onClickCancel"
+          >
             Cancel
           </button>
         </div>

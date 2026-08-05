@@ -175,8 +175,8 @@ export function useGraphData(selection: GraphSelection, visibility: GraphVisibil
   /** Replace the whole graph from a freshly fetched list of characters. */
   function loadData(result: Character[]) {
     nodeList.value = result.map((c) => new CharacterNode(c));
-    // Reset before rebuilding — loadData also runs on refresh (e.g. after a
-    // Foundry document sync), and stale edges would duplicate.
+    // Reset before rebuilding — loadData also runs on a board switch, and
+    // stale edges would duplicate.
     edges.value = [];
     nodeList.value.forEach((n) => {
       n.characterData.knowCharacters.forEach((relation) => {
@@ -207,21 +207,6 @@ export function useGraphData(selection: GraphSelection, visibility: GraphVisibil
   function onCharacterCreated(node: CharacterNode) {
     nodeList.value.push(node);
     selection.firstSelectedNodeId.value = node.id;
-  }
-
-  /**
-   * Add or rename a character coming from an external sync (Foundry actor →
-   * backend). Unlike {@link onCharacterCreated} it neither selects the node
-   * (the change wasn't this user's doing) nor assumes it is new — the same
-   * signal can reach a window that already fetched the character.
-   */
-  function onCharacterSynced(id: string, name: string) {
-    const existing = nodeList.value.find((n) => n.id === id);
-    if (existing) {
-      existing.updateName(name);
-      return;
-    }
-    nodeList.value.push(new CharacterNode(new Character(id, name)));
   }
 
   /** Remove a deleted character from the graph (with its fact connections). */
@@ -305,27 +290,6 @@ export function useGraphData(selection: GraphSelection, visibility: GraphVisibil
     factNode.updateFact(updatedFact.title, updatedFact.content);
   }
 
-  /**
-   * Add or edit a fact coming from an external sync (Foundry handout →
-   * backend). Known facts are updated **in place** (same node object, no
-   * remove-and-recreate); unknown ones are added, with the connection edge to
-   * `characterId` (the anchoring hidden system character) when given.
-   */
-  function onFactSynced(fact: Fact, characterId?: string) {
-    const existing = factNodeList.value.find((f) => f.id === fact.id);
-    if (existing) {
-      existing.updateFact(fact.title, fact.content);
-      return;
-    }
-    factNodeList.value.push(new FactNode(fact));
-    if (!characterId) return;
-    const node = nodeList.value.find((n) => n.id === characterId);
-    if (node) node.characterData.facts.push(fact);
-    if (!factEdges.value.some((e) => e.source === characterId && e.target === fact.id)) {
-      factEdges.value.push(new FactEdge(characterId, fact.id));
-    }
-  }
-
   /** Remove a deleted fact: its node, its edges, and its entries on characters. */
   function onFactDeleted(factId: string) {
     const idx = factNodeList.value.findIndex((f) => f.id === factId);
@@ -375,7 +339,6 @@ export function useGraphData(selection: GraphSelection, visibility: GraphVisibil
     getCharacterIdsConnectedToFact,
     loadData,
     onCharacterCreated,
-    onCharacterSynced,
     onCharacterDeleted,
     onCharacterUpdated,
     onEdgeKnowDeleted,
@@ -384,7 +347,6 @@ export function useGraphData(selection: GraphSelection, visibility: GraphVisibil
     onFactCreated,
     onFactConnected,
     onFactUpdated,
-    onFactSynced,
     onFactDeleted,
     onFactEdgeDeleted,
     onPathFound,

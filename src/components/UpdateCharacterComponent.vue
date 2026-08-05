@@ -3,7 +3,7 @@
  * Modal to rename a character.
  * - Loads the current character (and its ETag `version`) each time it opens,
  *   so the update carries the right version even after an external change
- *   (e.g. the Foundry document sync renamed the character in the meantime).
+ *   (e.g. someone else renamed the character in the meantime).
  * - A 412 on save reloads the fresh name + version into the form and keeps
  *   the modal open so the user can retry.
  * - Emits `updatedCharacter` with the {@link VersionedCharacter} on success.
@@ -130,7 +130,11 @@ onBeforeUnmount(() => {
           >
             Update
           </button>
-          <button id="update-character-node-cancel-button" class="button is-ghost" @click="onClickCancel">
+          <button
+            id="update-character-node-cancel-button"
+            class="button is-ghost"
+            @click="onClickCancel"
+          >
             Cancel
           </button>
         </div>

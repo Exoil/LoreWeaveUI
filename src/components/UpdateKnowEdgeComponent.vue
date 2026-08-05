@@ -149,7 +149,11 @@ onBeforeUnmount(() => {
           >
             Update
           </button>
-          <button id="update-know-edge-cancel-button" class="button is-ghost" @click="onClickCancel">
+          <button
+            id="update-know-edge-cancel-button"
+            class="button is-ghost"
+            @click="onClickCancel"
+          >
             Cancel
           </button>
         </div>

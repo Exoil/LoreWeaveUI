@@ -20,12 +20,6 @@ const props = defineProps<{
   secondSelectedCharacterId: string | null;
   isGameMaster: boolean;
   isCharacterHidden: boolean;
-  /**
-   * The selected character is the module's hidden system character (anchors
-   * handout-facts). It must survive and stay hidden, so rename, delete and
-   * the visibility toggle are disabled for it.
-   */
-  isProtectedCharacter: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -38,7 +32,7 @@ const emit = defineEmits<{
 }>();
 
 function onUpdateClick() {
-  if (!props.firstSelectedCharacterId || props.isProtectedCharacter) return;
+  if (!props.firstSelectedCharacterId) return;
   emit('openUpdateCharacterDialog');
   hideMenu();
 }
@@ -67,7 +61,7 @@ function onCreateFactClick() {
 }
 
 function onToggleVisibilityClick() {
-  if (!props.firstSelectedCharacterId || props.isProtectedCharacter) return;
+  if (!props.firstSelectedCharacterId) return;
   emit('toggleCharacterVisibility');
   hideMenu();
 }
@@ -102,7 +96,7 @@ defineExpose({
             class="dropdown-item"
             type="button"
             @click="onUpdateClick"
-            :disabled="!firstSelectedCharacterId || isProtectedCharacter"
+            :disabled="!firstSelectedCharacterId"
           >
             Update character
           </button>
@@ -119,7 +113,6 @@ defineExpose({
 
           <div v-if="isGameMaster" class="dropdown-item dropdown-item--embedded">
             <DeleteCharacterComponent
-              :disabled="!firstSelectedCharacterId || isProtectedCharacter"
               :loreWeaveApiService="loreWeaveApiService"
               :characterId="firstSelectedCharacterId"
               @deletedCharacter="onCharacterDeleted"
@@ -154,15 +147,9 @@ defineExpose({
             class="dropdown-item"
             type="button"
             @click="onToggleVisibilityClick"
-            :disabled="!firstSelectedCharacterId || isProtectedCharacter"
+            :disabled="!firstSelectedCharacterId"
           >
-            {{
-              isProtectedCharacter
-                ? 'Always hidden (system)'
-                : isCharacterHidden
-                  ? 'Show for players'
-                  : 'Hide from players'
-            }}
+            {{ isCharacterHidden ? 'Show for players' : 'Hide from players' }}
           </button>
         </div>
       </div>
