@@ -67,8 +67,8 @@ async function onClickUpdateFact() {
       signal,
     );
   } catch (error) {
-    // Someone else changed the fact since it was loaded (e.g. the Foundry
-    // handout sync) — pull the fresh state and let the user retry.
+    // Someone else changed the fact since it was loaded — pull the fresh state
+    // and let the user retry.
     if (LoreWeaveApiService.isPreconditionFailedError(error)) {
       await loadFact(props.factId);
       return;

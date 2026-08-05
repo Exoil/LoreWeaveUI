@@ -96,10 +96,6 @@ function onClickClose() {
                 <strong>Update</strong> and <strong>Delete</strong> live in the same right-click
                 menus.
               </li>
-              <li>
-                Characters created from Foundry actors and facts from journal handouts appear
-                automatically and stay in sync.
-              </li>
             </ul>
 
             <h5>What players see (GM only)</h5>

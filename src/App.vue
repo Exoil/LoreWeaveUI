@@ -12,21 +12,14 @@ import {
   BOARD_RESOLVER_KEY,
   GRAPH_LAYOUT_STORAGE_KEY,
   GRAPH_LAYOUT_SYNC_KEY,
-  GRAPH_REFRESH_KEY,
   GRAPH_VISIBILITY_HOST_KEY,
-  LINKED_DOCUMENT_UPDATER_KEY,
-  SYSTEM_CHARACTER_ID_KEY,
-  type GraphDataChange,
 } from '@/foundry/injection-keys';
 import { MODULE_ID } from '@/foundry/constants';
 import { isStandalone } from '@/env';
 import { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 import { NotificationService } from '@/services/NotificationService';
-import { Fact } from '@/services/Models/Fact';
 import type { BoardConfiguration } from '@/services/Models/BoardConfiguration';
 import type { VersionedBoard } from '@/services/Models/VersionedBoard';
-import type { VersionedCharacter } from '@/services/Models/VersionedCharacter';
-import type { VersionedFact } from '@/services/Models/VersionedFact';
 import NotificationListComponent from '@/components/NotificationListComponent.vue';
 import GraphLegendComponent from '@/components/GraphLegendComponent.vue';
 import HelpManualComponent from '@/components/HelpManualComponent.vue';
@@ -190,34 +183,12 @@ const selectedEdgeIsFactEdge = computed<boolean>(() =>
   selectedEdgeToId.value ? graph.isFactNode(selectedEdgeToId.value) : false,
 );
 
-// --- Graph → Foundry mirroring ---------------------------------------------
-// Graph-side edits flow back onto the linked Foundry documents (rename the
-// actor, update the handout). Strictly link-gated: graph-only characters and
-// facts never touch Foundry. Standalone SPA: null → no mirroring.
-const linkedDocumentUpdater = inject(LINKED_DOCUMENT_UPDATER_KEY, null);
-function onCharacterUpdatedInDialog(character: VersionedCharacter) {
-  onCharacterUpdated(character);
-  linkedDocumentUpdater?.renameLinkedActor(character.id, character.name);
-}
-function onFactUpdatedInDialog(fact: VersionedFact) {
-  onFactUpdated(fact);
-  linkedDocumentUpdater?.updateLinkedJournal(fact.id, fact.title, fact.content);
-}
-
 // --- GM hide/show (context-menu wiring) ------------------------------------
 // Hidden flags for whatever is currently selected drive the menu labels
 // ("Hide from players" / "Show for players"); the toggles flip persistence.
 const selectedCharacterIsHidden = computed<boolean>(() =>
   firstSelectedNodeId.value ? visibility.isHidden(firstSelectedNodeId.value) : false,
 );
-// The hidden system character anchors handout-facts (see foundry/
-// document-sync) — deleting, renaming or revealing it would break that
-// contract, so its node menu disables those actions.
-const getSystemCharacterId = inject(SYSTEM_CHARACTER_ID_KEY, () => '');
-const selectedCharacterIsProtected = computed<boolean>(() => {
-  const systemCharacterId = getSystemCharacterId();
-  return !!systemCharacterId && firstSelectedNodeId.value === systemCharacterId;
-});
 const selectedFactIsHidden = computed<boolean>(() =>
   selectedFactNodeId.value ? visibility.isHidden(selectedFactNodeId.value) : false,
 );
@@ -232,7 +203,7 @@ const selectedEdgeIsHiddenViaNode = computed<boolean>(
     (selectedEdgeToId.value ? visibility.isHidden(selectedEdgeToId.value) : false),
 );
 function toggleSelectedCharacterVisibility() {
-  if (!firstSelectedNodeId.value || selectedCharacterIsProtected.value) return;
+  if (!firstSelectedNodeId.value) return;
   visibility.toggleVisibility(firstSelectedNodeId.value);
 }
 function toggleSelectedFactVisibility() {
@@ -248,13 +219,11 @@ onBeforeMount(() => {
   loreWeaveApiService = new LoreWeaveApiService(apiBaseUrl, notificationService);
 });
 
-// Initial load + follow-up whenever the host signals the backend data changed
-// (the GM's client synced a Foundry actor/journal — see foundry/document-sync).
-// Character changes carry a descriptor and are applied with one targeted
-// fetch; anything else falls back to reloading the whole graph.
-const graphRefreshSource = inject(GRAPH_REFRESH_KEY, null);
+// The graph is loaded once per board activation. Nothing outside this window
+// writes to the graph, so there is no refresh feed to follow: the window
+// re-reads the backend only when the user switches board, and applies its own
+// edits to the in-memory graph.
 let loadController: AbortController | null = null;
-let unsubscribeGraphRefresh: (() => void) | null = null;
 
 async function loadGraphData() {
   loadController?.abort();
@@ -266,50 +235,6 @@ async function loadGraphData() {
     // A newer refresh aborted this one — the newer request owns the graph.
     if (error instanceof Error && error.name === 'CanceledError') return;
     throw error;
-  }
-}
-
-async function applyExternalGraphChange(change: GraphDataChange | null) {
-  if (!change) {
-    await loadGraphData();
-    return;
-  }
-  try {
-    if (change.kind === 'character') {
-      if (change.action === 'deleted') {
-        graph.onCharacterDeleted(change.characterId);
-        return;
-      }
-      // created/updated: fetch just the one character the API reported.
-      const character = await loreWeaveApiService.getCharacterAsync(change.characterId);
-      graph.onCharacterSynced(character.id, character.name);
-      return;
-    }
-    // Fact (handout) changes.
-    if (change.action === 'deleted') {
-      graph.onFactDeleted(change.factId);
-      return;
-    }
-    // A brand-new fact anchored to a character this window has never seen
-    // (the system character created moments ago) — reconcile with a full load.
-    if (
-      change.action === 'created' &&
-      change.characterId &&
-      !graph.getCharacterNameById(change.characterId)
-    ) {
-      await loadGraphData();
-      return;
-    }
-    const fact = await loreWeaveApiService.getFactAsync(change.factId);
-    graph.onFactSynced(
-      new Fact(fact.id, fact.title, fact.content),
-      change.action === 'created' ? change.characterId : undefined,
-    );
-  } catch (error) {
-    if (error instanceof Error && error.name === 'CanceledError') return;
-    // The HTTP interceptor already toasted; keep the window alive and let the
-    // next full load reconcile.
-    console.error('LoreWeave: applying synced change failed', error);
   }
 }
 
@@ -330,9 +255,6 @@ async function activateBoard(boardId: string) {
 }
 
 onMounted(async () => {
-  unsubscribeGraphRefresh =
-    graphRefreshSource?.subscribe((change) => void applyExternalGraphChange(change)) ?? null;
-
   // Foundry: the host resolves (and, on the GM's client, creates) the board
   // correlated with the world — no picker.
   if (boardResolver) {
@@ -366,7 +288,6 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
-  unsubscribeGraphRefresh?.();
   loadController?.abort();
 });
 
@@ -422,7 +343,7 @@ function openCreateKnowEdgeDialog() {
 const updateNodeCharacterNodeModal = ref(false);
 function openUpdateDialog() {
   if (!visibility.isGameMaster) return;
-  if (!firstSelectedNodeId.value || selectedCharacterIsProtected.value) return;
+  if (!firstSelectedNodeId.value) return;
   updateNodeCharacterNodeModal.value = true;
 }
 
@@ -532,7 +453,6 @@ function openKnowEdgeDetailsDialog(edgeId: string) {
       :secondSelectedCharacterId="secondSelectedNodeId"
       :isGameMaster="visibility.isGameMaster"
       :isCharacterHidden="selectedCharacterIsHidden"
-      :isProtectedCharacter="selectedCharacterIsProtected"
       @openUpdateCharacterDialog="openUpdateDialog"
       @openFindPathDialog="openFindPathDialog"
       @openCreateKnowEdgeDialog="openCreateKnowEdgeDialog"
@@ -581,7 +501,7 @@ function openKnowEdgeDetailsDialog(edgeId: string) {
       v-model:open="updateNodeCharacterNodeModal"
       :loreWeaveApiService="loreWeaveApiService"
       :characterId="firstSelectedNodeId"
-      @updatedCharacter="onCharacterUpdatedInDialog"
+      @updatedCharacter="onCharacterUpdated"
     />
 
     <CreateCharacterKnowEdgeComponent
@@ -618,7 +538,7 @@ function openKnowEdgeDetailsDialog(edgeId: string) {
       v-model:open="updateFactDialogOpen"
       :loreWeaveApiService="loreWeaveApiService"
       :factId="selectedFactNodeId"
-      @updatedFact="onFactUpdatedInDialog"
+      @updatedFact="onFactUpdated"
     />
 
     <ConnectFactToCharacterComponent

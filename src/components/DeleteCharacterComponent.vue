@@ -10,8 +10,6 @@ import type { LoreWeaveApiService } from '@/services/LoreWeaveApiService';
 const props = defineProps<{
   loreWeaveApiService: LoreWeaveApiService;
   characterId: string | null;
-  /** Extra host-driven lock (e.g. the protected system character). */
-  disabled?: boolean;
 }>();
 let controller: AbortController | null = null;
 const emit = defineEmits<{
@@ -20,7 +18,7 @@ const emit = defineEmits<{
 
 async function onClickDeleteCharacter() {
   controller?.abort();
-  if (!props.characterId || props.disabled) return;
+  if (!props.characterId) return;
 
   controller = new AbortController();
   const signal = controller.signal;
@@ -36,11 +34,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="delete-character-form">
-    <button
-      id="delete-character-button"
-      @click="onClickDeleteCharacter"
-      :disabled="!characterId || disabled"
-    >
+    <button id="delete-character-button" @click="onClickDeleteCharacter" :disabled="!characterId">
       Delete character
     </button>
   </div>

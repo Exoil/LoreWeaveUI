@@ -28,7 +28,7 @@ function readStoredBoardId(): string {
  *   a missing link means the GM has not opened LoreWeave yet.
  * - The GM verifies the stored id on every resolve and recreates the board
  *   when the backend no longer knows it (e.g. the API database was reset) —
- *   same self-healing contract as the document-sync links.
+ *   same self-healing contract the layout and visibility settings use.
  */
 export async function ensureWorldBoardAsync(getApiBaseUrl: () => string): Promise<string> {
   const storedId = readStoredBoardId();
