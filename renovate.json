@@ -1,0 +1,59 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard", ":semanticCommits"],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 5am on monday"],
+    "automerge": true
+  },
+  "packageRules": [
+    {
+      "description": "Build/test tooling: patch + minor land on their own once CI is green. minimumReleaseAge keeps us off same-day releases, which is where supply-chain incidents surface.",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupName": "dev dependencies (non-major)",
+      "minimumReleaseAge": "3 days",
+      "automerge": true
+    },
+    {
+      "description": "Runtime dependencies ship to users — always reviewed by a human, never automerged.",
+      "matchDepTypes": ["dependencies"],
+      "matchUpdateTypes": ["patch", "minor"],
+      "groupName": "runtime dependencies (non-major)",
+      "automerge": false
+    },
+    {
+      "description": "Majors are breaking by definition: one PR each, so the changelog is readable and a revert is surgical.",
+      "matchUpdateTypes": ["major"],
+      "automerge": false,
+      "labels": ["dependencies", "breaking"]
+    },
+    {
+      "description": "Vue, Vite and the TS toolchain move in lockstep; splitting them produces PRs that cannot pass CI on their own.",
+      "matchPackageNames": [
+        "vue",
+        "vue-router",
+        "vue-tsc",
+        "@vue/**",
+        "vite",
+        "@vitejs/**",
+        "vitest",
+        "@vitest/**"
+      ],
+      "groupName": "vue + vite toolchain"
+    },
+    {
+      "description": "Engine constraint, not a dependency — bumping it changes what CI and contributors must run.",
+      "matchDepTypes": ["engines"],
+      "automerge": false
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "labels": ["dependencies", "security"],
+    "minimumReleaseAge": null,
+    "automerge": false
+  }
+}
