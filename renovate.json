@@ -19,11 +19,12 @@
       "automerge": true
     },
     {
-      "description": "Runtime dependencies ship to users — always reviewed by a human, never automerged.",
+      "description": "Runtime dependencies ship to users, so CI (lint, type-check, build, unit tests) is the gate: patch + minor land on their own once it is green. minimumReleaseAge keeps us off same-day releases, which is where supply-chain incidents surface.",
       "matchDepTypes": ["dependencies"],
       "matchUpdateTypes": ["patch", "minor"],
       "groupName": "runtime dependencies (non-major)",
-      "automerge": false
+      "minimumReleaseAge": "3 days",
+      "automerge": true
     },
     {
       "description": "Majors are breaking by definition: one PR each, so the changelog is readable and a revert is surgical.",
