@@ -6,11 +6,25 @@ on:
   pull_request:
     branches: [main, master]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Forked PRs have no access to SONAR_TOKEN, so analysis is skipped there.
+  # Lint, build and tests still run in that case.
+  RUN_SONAR: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+
 jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # Sonar needs full history for blame / new-code detection
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -21,5 +35,10 @@ jobs:
         run: bun lint
       - name: Type-check and build
         run: bun run build
-      - name: Run unit tests
-        run: bun run test:run
+      - name: Run unit tests with coverage
+        run: bun run coverage
+      - name: SonarCloud analysis
+        if: env.RUN_SONAR == 'true'
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

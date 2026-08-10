@@ -32,6 +32,20 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: false,
+    coverage: {
+      provider: 'v8',
+      // `lcov` is the only format SonarCloud can import for TS/JS; `text`
+      // keeps a readable summary in the terminal / CI log.
+      reporter: ['text', 'lcov'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.{ts,vue}'],
+      exclude: [
+        'src/main.ts',
+        'src/**/*.d.ts',
+        // NSwag-generated, not hand-written code.
+        'src/services/httpClients/**',
+      ],
+    },
   },
 
   server: {
