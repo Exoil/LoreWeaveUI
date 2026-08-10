@@ -54,7 +54,7 @@
     "globals": "^17.3.0",
     "jiti": "^2.6.1",
     "jsdom": "^30.0.0",
-    "npm-run-all2": "^8.0.4",
+    "npm-run-all2": "^9.0.0",
     "postcss-prefix-selector": "^2.1.1",
     "prettier": "^3.8.1",
     "typescript": "~5.9.0",
